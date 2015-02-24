@@ -14,7 +14,8 @@ class DBN:
     """
     Dynamic Bayes net. 
     """
-    def __init__(self, name=""):
+    def __init__(self, init_model, name=""):
+        self.init_model = init_model
         self.name = name
         # Set of time conditionals. These specify the core
         # of the model.
@@ -49,7 +50,7 @@ class DBN:
 
     def forward_sample(self):
         """
-        Generate a forward sample from the model. This is a
+        Generate a forward sample from the model. This is a 
         setting of all the nodes given the previous time step.
         """
         # If we're in the first time step, just generate a sample
