@@ -11,7 +11,7 @@ PARTFEVER_VERSION = "0.1"
 with open("./particlefever/__init__.py", "w") as version_out:
       version_out.write("__version__ = \"%s\"\n" %(PARTFEVER_VERSION))
 
-long_description = open("./readme.md").read()
+long_description = open("README.md").read()
 
 setup(name = 'particlefever',
       version = PARTFEVER_VERSION,
@@ -26,7 +26,8 @@ setup(name = 'particlefever',
       keywords = ['science', 'bayesian', 'inference', 'mcmc',
                   'monte-carlo'],
       install_requires = [
-          "Cython"],
+          "Cython",
+          "pyhsmm"],
       classifiers = [
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
