@@ -17,14 +17,26 @@ class DBN:
     def __init__(self, init_model, name=""):
         self.init_model = init_model
         self.name = name
+        # Number of time slices in model
+        # starts with 1, because we always have the initial model
+        self.num_time_slices = 1
         # Set of time conditionals. These specify the core
         # of the model.
-        self.time_conditionals = []
-        # Model at time t 
-        self.curr_model = None
+        self.time_conditionals = {}
+        # Model at current time
+        self.curr_model = init_model
+        self.curr_time_slice = 0
+        self.time_models = []
         # Models at time t-1,t-2,...,t-N
+        # encoded as tuples: [(t-1, m1), (t-2, m2), etc...]
         self.prev_models = []
 
+    def __repr__(self):
+        return self.__init__()
+
+    def __str__(self):
+        return "DBN(name=%s, num_time_slices=%d)" \
+               %(self.name, self.num_time_slices)
 
     def init_time(self):
         """
@@ -32,21 +44,34 @@ class DBN:
         """
         pass
 
+    def add_time_slice(self):
+        """
+        Add another time slice to the model. This means
+        replicating the initial time model to the next time
+        step. NOTE: this means that we're not allowing the number of
+        variables to change across time. Each time slice must
+        have the exact same variables as the initial model.
+        """
+        self.time_models.append(self.init_model)
+        self.num_time_slices += 1
 
-    def add_conditional(self, conditional_func, t_curr_node, t_prev_nodes):
+    def add_time_conditional(self, var_to_cond_func):
         """
         Specify conditional relationship between a node and a set
         of previous nodes.
 
         Args:
-        - conditional_func: conditional function. Takes a current
-          node and a set of previous nodes and produces the conditional
-          distribution.
-        - t_curr_node: current time node
-        - t_prev_nodes: previous nodes
+        - var_to_cond_func: mapping from variable name to conditional
+          function, e.g. {"X": func} which says that "X" depends on
+          'func'.
         """
+        for var in var_to_cond_func:
+            if var in self.time_conditionals:
+                # Each variable can only have a single time conditional
+                raise Exception, "Variable %s already has time conditional" \
+                                 %(var)
+            self.time_conditionals[var] = var_to_cond_func[var]
         pass
-
 
     def forward_sample(self):
         """
@@ -55,12 +80,11 @@ class DBN:
         """
         # If we're in the first time step, just generate a sample
         # from all the variables
-        #if at first time -> get initial sample
-
+        if self.curr_time_slice == 0:
+            return model.draw_from_prior()
         # If we're not in the first time step, generate a sample
         # conditional on the relevant number of previous samples
-        pass
-
+        # 
 
     def get_max_time_dep(self):
         """
