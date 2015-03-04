@@ -24,7 +24,7 @@ class DBN:
         # of the model.
         self.time_conditionals = {}
         # Model at current time
-        self.curr_model = init_model
+        self.curr_model = init_model.copy()
         self.curr_time_slice = 0
         self.time_models = []
         # Models at time t-1,t-2,...,t-N
@@ -71,7 +71,6 @@ class DBN:
                 raise Exception, "Variable %s already has time conditional" \
                                  %(var)
             self.time_conditionals[var] = var_to_cond_func[var]
-        pass
 
     def forward_sample(self):
         """
@@ -80,11 +79,31 @@ class DBN:
         """
         # If we're in the first time step, just generate a sample
         # from all the variables
+        next_model = None
         if self.curr_time_slice == 0:
-            return model.draw_from_prior()
-        # If we're not in the first time step, generate a sample
-        # conditional on the relevant number of previous samples
-        # 
+            next_model = self.curr_model.draw_from_prior()
+        else:
+            # If we're not in the first time step, generate a sample
+            # conditional on the relevant number of previous samples
+            ##
+            ## for each node in the current model
+            ##   - get the node's markov blanket
+            ##       the markov blanket includes previous time dependencies
+            ##   - sample value for node conditioned on its Markov blanket
+            pass
+#            for node in self.model:
+#                pass
+        # Advance our sample
+        self.advance_time(next_model)
+
+    def advance_time(self, next_model):
+        """
+        Move forward in time. Set 'next_model' to be
+        the current time model.
+        """
+        self.curr_time_model = next_model
+        # Advance time index forward
+        self.curr_time_slice += 1
 
     def get_max_time_dep(self):
         """

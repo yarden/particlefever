@@ -77,9 +77,14 @@ def rain_conditional_func(curr_model, prev_models):
         else:
             return (flip <= p_rain_given_no_rain)
 
+    return (logp, random)
+
+
 # Add a time slice 
 rain_dbn.add_time_slice()
 # Register conditional
 rain_dbn.add_time_conditional({"rain": rain_conditional_func})
+# Forward sample
+rain_dbn.forward_sample()
 print "Rain DBN: "
 print rain_dbn
