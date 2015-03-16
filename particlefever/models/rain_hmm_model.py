@@ -25,6 +25,19 @@ def umbrella_logp(value, rain):
     return logp
 
 
+def umbrella_random(rain):
+    return (np.random.rand() <= np.exp(umbrella_logp(True, rain)))
+
+
+
+# Unobserved node
+#umbrella = pymc.Stochastic(name="umbrella",
+#                           doc="umbrella var",
+#                           parents={"rain": rain},
+#                           logp=umbrella_logp,
+#                           random=umbrella_random)
+
+# Observed node
 umbrella = pymc.Stochastic(name="umbrella",
                            doc="umbrella var",
                            parents={"rain": rain},
@@ -79,11 +92,11 @@ def rain_conditional_func(curr_model, prev_models):
 
     return (logp, random)
 
-
 # Add a time slice 
-rain_dbn.add_time_slice()
+rain_dbn.add_time()
 # Register conditional
 rain_dbn.add_time_conditional({"rain": rain_conditional_func})
+rain_dbn.set_curr_time(1)
 # Forward sample
 rain_dbn.forward_sample()
 print "Rain DBN: "

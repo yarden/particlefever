@@ -8,6 +8,7 @@ import time
 import pymc
 
 import particlefever
+import particlefever.pgm as pgm
 
 
 class DBN:
@@ -19,24 +20,25 @@ class DBN:
         self.name = name
         # Number of time slices in model
         # starts with 1, because we always have the initial model
-        self.num_time_slices = 1
+        self.num_times = 1
         # Set of time conditionals. These specify the core
         # of the model.
         self.time_conditionals = {}
         # Model at current time
-        self.curr_model = init_model.copy()
-        self.curr_time_slice = 0
+        ##### NOTE: Do we need to make a copy of init_model?
+        self.curr_model = init_model
+        self.curr_time = 0
         self.time_models = []
         # Models at time t-1,t-2,...,t-N
         # encoded as tuples: [(t-1, m1), (t-2, m2), etc...]
         self.prev_models = []
 
     def __repr__(self):
-        return self.__init__()
+        return self.__str__()
 
     def __str__(self):
-        return "DBN(name=%s, num_time_slices=%d)" \
-               %(self.name, self.num_time_slices)
+        return "DBN(name=%s, num_times=%d)" \
+               %(self.name, self.num_times)
 
     def init_time(self):
         """
@@ -44,7 +46,7 @@ class DBN:
         """
         pass
 
-    def add_time_slice(self):
+    def add_time(self):
         """
         Add another time slice to the model. This means
         replicating the initial time model to the next time
@@ -53,7 +55,8 @@ class DBN:
         have the exact same variables as the initial model.
         """
         self.time_models.append(self.init_model)
-        self.num_time_slices += 1
+        self.num_times += 1
+        print "Advanced time (%d time slices now)" %(self.num_times)
 
     def add_time_conditional(self, var_to_cond_func):
         """
@@ -72,6 +75,30 @@ class DBN:
                                  %(var)
             self.time_conditionals[var] = var_to_cond_func[var]
 
+    def get_markov_blanket(self, node):
+        """
+        Return Markov blanket of node. Takes time dependencies
+        into account.
+        
+        A node's Markov blanket is the node's Markov blanket in the current
+        time point, plus the nodes that affect it back in time, across
+        in the set of relevant previous time points
+        """
+        # Get current time's Markov blanket
+        markov_blanket = pgm.get_markov_blanket(node, self.curr_model)
+        # Look at the relevant set of previous time points to get
+        # the node's dependencies
+        return []
+
+    def set_curr_time(self, t):
+        """
+        Set current time.
+        """
+        if t > self.num_times:
+            raise Exception, "%d not valid time (only %d time slices)" \
+                  %(t, self.num_times)
+        self.curr_time = t
+
     def forward_sample(self):
         """
         Generate a forward sample from the model. This is a 
@@ -80,7 +107,7 @@ class DBN:
         # If we're in the first time step, just generate a sample
         # from all the variables
         next_model = None
-        if self.curr_time_slice == 0:
+        if self.curr_time == 0:
             next_model = self.curr_model.draw_from_prior()
         else:
             # If we're not in the first time step, generate a sample
@@ -90,7 +117,12 @@ class DBN:
             ##   - get the node's markov blanket
             ##       the markov blanket includes previous time dependencies
             ##   - sample value for node conditioned on its Markov blanket
-            pass
+            print "NODES: ", self.curr_model.nodes, type(self.curr_model.nodes)
+            for node in self.curr_model.nodes:
+                node_blanket = self.get_markov_blanket(node)
+                # Sample value for node conditioned on Markov blanket
+                print "sampling value conditioned on mblanket: ", node_blanket
+                # ...
 #            for node in self.model:
 #                pass
         # Advance our sample
@@ -103,7 +135,7 @@ class DBN:
         """
         self.curr_time_model = next_model
         # Advance time index forward
-        self.curr_time_slice += 1
+        self.curr_time += 1
 
     def get_max_time_dep(self):
         """
