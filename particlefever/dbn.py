@@ -7,6 +7,8 @@ import time
 
 import pymc
 
+import copy
+
 import particlefever
 import particlefever.pgm as pgm
 
@@ -18,17 +20,16 @@ class DBN:
     def __init__(self, init_model, name=""):
         self.init_model = init_model
         self.name = name
-        # Number of time slices in model
-        # starts with 1, because we always have the initial model
-        self.num_times = 1
         # Set of time conditionals. These specify the core
         # of the model.
         self.time_conditionals = {}
         # Model at current time
         ##### NOTE: Do we need to make a copy of init_model?
-        self.curr_model = init_model
+        print "deep copy"
+        self.curr_model = copy.copy(init_model)
+        print "stopped copy"
         self.curr_time = 0
-        self.time_models = []
+        self.time_models = [(self.curr_time, init_model)]
         # Models at time t-1,t-2,...,t-N
         # encoded as tuples: [(t-1, m1), (t-2, m2), etc...]
         self.prev_models = []
@@ -40,11 +41,12 @@ class DBN:
         return "DBN(name=%s, num_times=%d)" \
                %(self.name, self.num_times)
 
-    def init_time(self):
+    @property
+    def num_times(self):
         """
-        Initialize the time.
+        Return number of time slices in model.
         """
-        pass
+        return len(self.time_models)
 
     def add_time(self):
         """
@@ -54,9 +56,11 @@ class DBN:
         variables to change across time. Each time slice must
         have the exact same variables as the initial model.
         """
-        self.time_models.append(self.init_model)
-        self.num_times += 1
-        print "Advanced time (%d time slices now)" %(self.num_times)
+        num_times = self.num_times 
+        self.time_models.append((num_times, copy.copy(self.init_model)))
+        print "Advanced time (%d time slices now)" %(num_times)
+        print "self.time.models: "
+        print self.time_models
 
     def add_time_conditional(self, var_to_cond_func):
         """
@@ -88,7 +92,7 @@ class DBN:
         markov_blanket = pgm.get_markov_blanket(node, self.curr_model)
         # Look at the relevant set of previous time points to get
         # the node's dependencies
-        return []
+        return markov_blanket
 
     def set_curr_time(self, t):
         """
@@ -117,11 +121,12 @@ class DBN:
             ##   - get the node's markov blanket
             ##       the markov blanket includes previous time dependencies
             ##   - sample value for node conditioned on its Markov blanket
-            print "NODES: ", self.curr_model.nodes, type(self.curr_model.nodes)
             for node in self.curr_model.nodes:
                 node_blanket = self.get_markov_blanket(node)
+                print "node: ", pgm.get_node_name(node)
+                print "Markov blanket: ", node_blanket
+                print "-"*50
                 # Sample value for node conditioned on Markov blanket
-                print "sampling value conditioned on mblanket: ", node_blanket
                 # ...
 #            for node in self.model:
 #                pass
@@ -152,6 +157,13 @@ class DBN:
         #   # record it
         # take max here
         pass
+
+    def unroll_to_pgm(self):
+        """
+        Unroll DBN to a PGM. Expand out the DBN to a PGM.
+        """
+        pass
+        
         
 
 #@pymc.stochastic()
