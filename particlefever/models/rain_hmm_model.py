@@ -6,6 +6,7 @@ import numpy as np
 
 import particlefever
 import particlefever.dbn as dbn
+import particlefever.pgm as pgm
 
 rain = pymc.Bernoulli("rain", 0.5)
 
@@ -101,3 +102,6 @@ rain_dbn.set_curr_time(1)
 rain_dbn.forward_sample()
 print "Rain DBN: "
 print rain_dbn
+
+print "Mblanket:"
+print pgm.get_markov_blanket(rain_model.get_node("umbrella"), rain_model)
