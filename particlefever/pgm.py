@@ -4,6 +4,45 @@
 import pymc
 import numpy as np
 
+import copy
+
+class Node:
+    """
+    Node in a graphical model.
+    """
+    def __init__(self, name, parents=[], children=[]):
+        self.name = name
+        self.parents = parents
+        self.children = children
+
+    def logp(self):
+        """
+        log probability.
+        """
+        return 0
+
+    def rand(self):
+        """
+        Sample value for node.
+        """
+        return None
+    
+
+class SimplePGM:
+    """
+    Simple probabilistic graphical model.
+    """
+    def __init__(self, nodes):
+        self.nodes = nodes
+
+    def get_markov_blanket(self, node):
+        """
+        Get node's Markov blanket.
+        """
+        markov_blanket = get_markov_blanket(node, self)
+        return markov_blanket
+        
+
 def get_markov_blanket(node, model, exclude_self=True):
     """
     Get Markov model of a node in pymc model. The Markov blanket
@@ -47,6 +86,25 @@ def get_node_name(node):
     in pymc variables (e.g. Stochastic nodes.)
     """
     return node.__name__
+
+def rename_pgm(pgm, suffix, copy_pgm=True):
+    """
+    Copy a given PGM and rename its variables
+    with the given suffix.
+    """
+    new_pgm = pgm
+    if copy_pgm:
+        new_pgm = copy.copy(pgm)
+    for var in new_pgm.variables:
+        var.__name__ = "%s%s" %(var.__name__,
+                                suffix)
+#        new_pgm.replace(None, var.__name__, var)
+        print "Replaced"
+        print new_pgm.nodes
+        print new_pgm.variables
+    return new_pgm
+        
+        
     
 
 

@@ -47,6 +47,12 @@ umbrella = pymc.Stochastic(name="umbrella",
                            value=True)
 rain_model = pymc.Model([rain, umbrella])
 
+print rain_model
+new_model = rain_model.value
+print new_model
+
+raise Exception, "test"
+
 # Run inference at t = 0
 m = pymc.MCMC(rain_model)
 m.sample(iter=5000)
@@ -74,7 +80,7 @@ def rain_conditional_func(curr_model, prev_models):
         """
         Score value for rain node.
         """
-        prev_rain_value = prev_models[0].rain.value
+        prev_rain_value = prev_models[self.order() - 1].rain.value
         if prev_rain_value:
             return pymc.bernoulli_like(curr_value, p_rain_given_rain)
         else:
@@ -91,17 +97,19 @@ def rain_conditional_func(curr_model, prev_models):
         else:
             return (flip <= p_rain_given_no_rain)
 
+    def order():
+        """
+        The order of the dependence, i.e. how many
+        time steps back the dependency goes.
+        """
+        return 1
+
     return (logp, random)
 
 # Add a time slice 
 rain_dbn.add_time()
 # Register conditional
-rain_dbn.add_time_conditional({"rain": rain_conditional_func})
-rain_dbn.set_curr_time(1)
-# Forward sample
-rain_dbn.forward_sample()
-print "Rain DBN: "
-print rain_dbn
+rain_dbn.add_time_dep({"rain": rain_conditional_func})
+# Unroll DBN
+pgm = rain_dbn.unroll_to_pgm(3)
 
-print "Mblanket:"
-print pgm.get_markov_blanket(rain_model.get_node("umbrella"), rain_model)

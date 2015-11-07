@@ -12,21 +12,19 @@ import copy
 import particlefever
 import particlefever.pgm as pgm
 
-
 class DBN:
     """
-    Dynamic Bayes net. 
+    Dynamic Bayes Net.
     """
     def __init__(self, init_model, name=""):
         self.init_model = init_model
         self.name = name
-        # Set of time conditionals. These specify the core
+        # Set of time dependencies. These specify the core
         # of the model.
-        self.time_conditionals = {}
+        self.time_deps = {}
         # Model at current time
-        ##### NOTE: Do we need to make a copy of init_model?
         print "deep copy"
-        self.curr_model = copy.copy(init_model)
+        self.curr_model = copy.deepcopy(init_model)
         print "stopped copy"
         self.curr_time = 0
         self.time_models = [(self.curr_time, init_model)]
@@ -57,14 +55,14 @@ class DBN:
         have the exact same variables as the initial model.
         """
         num_times = self.num_times 
-        self.time_models.append((num_times, copy.copy(self.init_model)))
+        self.time_models.append((num_times, copy.deepcopy(self.init_model)))
         print "Advanced time (%d time slices now)" %(num_times)
         print "self.time.models: "
         print self.time_models
 
-    def add_time_conditional(self, var_to_cond_func):
+    def add_time_dep(self, var_to_dep_func):
         """
-        Specify conditional relationship between a node and a set
+        Specify time dependency relationship between a node and a set
         of previous nodes.
 
         Args:
@@ -72,12 +70,12 @@ class DBN:
           function, e.g. {"X": func} which says that "X" depends on
           'func'.
         """
-        for var in var_to_cond_func:
-            if var in self.time_conditionals:
-                # Each variable can only have a single time conditional
-                raise Exception, "Variable %s already has time conditional" \
+        for var in var_to_dep_func:
+            if var in self.time_deps:
+                # Each variable can only have a single time dependency
+                raise Exception, "Variable %s already has time dependency" \
                                  %(var)
-            self.time_conditionals[var] = var_to_cond_func[var]
+            self.time_deps[var] = var_to_dep_func[var]
 
     def get_markov_blanket(self, node):
         """
@@ -128,9 +126,6 @@ class DBN:
                 print "-"*50
                 # Sample value for node conditioned on Markov blanket
                 # ...
-#            for node in self.model:
-#                pass
-        # Advance our sample
         self.advance_time(next_model)
 
     def advance_time(self, next_model):
@@ -142,13 +137,9 @@ class DBN:
         # Advance time index forward
         self.curr_time += 1
 
-    def get_max_time_dep(self):
+    def get_max_time_dep(self, node):
         """
-        Get maximum time dependency for the network. This is the
-        maximum number of time steps that affect any node in the
-        network. I.e., if a node in the current time step depends on
-        the last 5 time steps, and all the rest depend on time steps < 5,
-        then the maximum time dependency is 5.
+        Get maximum time dependency for a given node.
         """
         # iterate through the time conditionals and calculate
         # the maximum dependency
@@ -158,13 +149,31 @@ class DBN:
         # take max here
         pass
 
-    def unroll_to_pgm(self):
+    def unroll_to_pgm(self, num_steps):
         """
         Unroll DBN to a PGM. Expand out the DBN to a PGM.
         """
-        pass
+        curr_pgm = copy.copy(self.init_model.value)
+        unrolled_pgm = None
+        pgms = []
+        for t in range(num_steps):
+            new_pgm = pgm.rename_pgm(curr_pgm, "_%d" %(t))
+            pgms.append(new_pgm)
+        print "pgms: "
+        for p in pgms:
+            print p
+            for n in p.variables:
+                print n, n.__name__
+            print "-" * 15
+        print "init model: "
+        print self.init_model
+        for t in self.init_model.variables:
+            print t, t.__name__
+        return pgms
         
-        
+            
+            
+            
 
 #@pymc.stochastic()
 
