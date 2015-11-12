@@ -6,29 +6,7 @@ import numpy as np
 
 import copy
 
-class Node:
-    """
-    Node in a graphical model.
-    """
-    def __init__(self, name, parents=[], children=[]):
-        self.name = name
-        self.parents = parents
-        self.children = children
-
-    def logp(self):
-        """
-        log probability.
-        """
-        return 0
-
-    def rand(self):
-        """
-        Sample value for node.
-        """
-        return None
-    
-
-class SimplePGM:
+class PGM:
     """
     Simple probabilistic graphical model.
     """
@@ -41,6 +19,12 @@ class SimplePGM:
         """
         markov_blanket = get_markov_blanket(node, self)
         return markov_blanket
+
+    def __repr__(self):
+        return self.__str__(self)
+
+    def __str__(self):
+        return "PGM(nodes=%s)" %(map(str, self.nodes))
         
 
 def get_markov_blanket(node, model, exclude_self=True):

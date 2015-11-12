@@ -13,37 +13,48 @@ class Node(object):
     """
     Node in a graphical model.
     """
-    def __init__(self, name, parents=[], children=[]):
+    def __init__(self, name="", doc="", parents={}, children=[]):
         self.name = name
+        self.doc = doc
         self.parents = parents
         self.children = children
 
-        def logp(self):
-            """
-            log probability.
-            """
-            return None
+    def __repr__(self):
+        return self.__init__()
 
-        def rand(self):
-            """
-            Sample value for node.
-            """
-            return None
-        
+    def __str__(self):
+        return "Node(%s)" %(self.name)
 
-class Bernoulli(Node):
-    def __init__(self, name, p, parents=[], children=[]):
-        Node.__init__(name, parents=parents, children=children)
+
+class Stochastic(Node):
+    """
+    Stochastic node.
+    """
+    def __init__(self, name="", doc="", parents={}, children=[],
+                 logp=None, random=None):
+        Node.__init__(self, name, doc=doc, parents=parents, children=children)
+        self.logp = logp
+        self.random = random
+
+    def get_logp(self):
+        return self.logp
+    
+    def __str__(self):
+        return "Stochastic(%s)" %(self.name)
+
+    
+class Bernoulli(Stochastic):
+    def __init__(self, name, p, parents={}, children=[], logp=None):
+        Node.__init__(self, name=name, parents=parents, children=children)
         self.p = p
-
-    def logp(self):
-        """
-        log probability of Bernoulli.
-        """
-        pass
+        self.logp = logp
 
     def rand(self):
         """
         Sample from Bernoulli.
         """
         pass
+
+    def __str__(self):
+        return "Bernoulli(%s)" %(self.name)
+        

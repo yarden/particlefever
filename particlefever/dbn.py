@@ -16,18 +16,13 @@ class DBN:
     """
     Dynamic Bayes Net.
     """
-    def __init__(self, init_model, name=""):
-        self.init_model = init_model
+    def __init__(self, name=""):
         self.name = name
         # Set of time dependencies. These specify the core
         # of the model.
         self.time_deps = {}
-        # Model at current time
-        print "deep copy"
-        self.curr_model = copy.deepcopy(init_model)
-        print "stopped copy"
+        # Current time
         self.curr_time = 0
-        self.time_models = [(self.curr_time, init_model)]
         # Models at time t-1,t-2,...,t-N
         # encoded as tuples: [(t-1, m1), (t-2, m2), etc...]
         self.prev_models = []
@@ -54,28 +49,35 @@ class DBN:
         variables to change across time. Each time slice must
         have the exact same variables as the initial model.
         """
-        num_times = self.num_times 
-        self.time_models.append((num_times, copy.deepcopy(self.init_model)))
-        print "Advanced time (%d time slices now)" %(num_times)
-        print "self.time.models: "
-        print self.time_models
+        pass
 
-    def add_time_dep(self, var_to_dep_func):
+    def add_time_dep_logp(self, var_name, curr_time, time_logp):
         """
-        Specify time dependency relationship between a node and a set
-        of previous nodes.
+        Specify time dependent logp between a node and a set
+        of previous nodes, i.e.
+
+        depends(rain, t, time_logp)
+
+        where time_dep_func is a function, arguments are the
+        list of variables and time indices that rain @ time t
+        depends on.
+
+        e.g.
+
+        def time_dep_logp(vars, [('rain', t-1), ('umbrella', t-2)]):
+          # specify here the probability that rain takes on
+          # a value at time t, given 'rain' at t-1 and 'umbrella'
+          # at time t-2
+          return p
 
         Args:
-        - var_to_cond_func: mapping from variable name to conditional
-          function, e.g. {"X": func} which says that "X" depends on
-          'func'.
+        - curr_time: time point for which probability is specified
+        - time_deps: list of time dependencies; variables
         """
-        for var in var_to_dep_func:
-            if var in self.time_deps:
-                # Each variable can only have a single time dependency
-                raise Exception, "Variable %s already has time dependency" \
-                                 %(var)
-            self.time_deps[var] = var_to_dep_func[var]
+        if (varname, curr_time) in self.time_deps:
+            raise Exception, "Already have time logp for %s @ t=%s" \
+                  %(varname, str(curr_time))
+        self.time_deps[(varname, curr_time)] = time_logp
 
     def get_markov_blanket(self, node):
         """
@@ -128,48 +130,57 @@ class DBN:
                 # ...
         self.advance_time(next_model)
 
-    def advance_time(self, next_model):
-        """
-        Move forward in time. Set 'next_model' to be
-        the current time model.
-        """
-        self.curr_time_model = next_model
-        # Advance time index forward
-        self.curr_time += 1
 
-    def get_max_time_dep(self, node):
+    def unroll_to_pgm(self, model_func, num_steps):
         """
-        Get maximum time dependency for a given node.
+        Unroll DBN to PGM.
         """
-        # iterate through the time conditionals and calculate
-        # the maximum dependency
-        # for time_cond in self.time_conditionals:
-        #   # calculcate maximum dependency (i.e. look at size of 'prev_nodes')
-        #   # record it
-        # take max here
-        pass
+        for n in range(num_steps):
+            for node in self.nodes:
+                pass
 
-    def unroll_to_pgm(self, num_steps):
-        """
-        Unroll DBN to a PGM. Expand out the DBN to a PGM.
-        """
-        curr_pgm = copy.copy(self.init_model.value)
-        unrolled_pgm = None
-        pgms = []
-        for t in range(num_steps):
-            new_pgm = pgm.rename_pgm(curr_pgm, "_%d" %(t))
-            pgms.append(new_pgm)
-        print "pgms: "
-        for p in pgms:
-            print p
-            for n in p.variables:
-                print n, n.__name__
-            print "-" * 15
-        print "init model: "
-        print self.init_model
-        for t in self.init_model.variables:
-            print t, t.__name__
-        return pgms
+    # def advance_time(self, next_model):
+    #     """
+    #     Move forward in time. Set 'next_model' to be
+    #     the current time model.
+    #     """
+    #     self.curr_time_model = next_model
+    #     # Advance time index forward
+    #     self.curr_time += 1
+
+    # def get_max_time_dep(self, node):
+    #     """
+    #     Get maximum time dependency for a given node.
+    #     """
+    #     # iterate through the time conditionals and calculate
+    #     # the maximum dependency
+    #     # for time_cond in self.time_conditionals:
+    #     #   # calculate maximum dependency (i.e. look at size of 'prev_nodes')
+    #     #   # record it
+    #     # take max here
+    #     pass
+
+    # def unroll_to_pgm(self, num_steps):
+    #     """
+    #     Unroll DBN to a PGM. Expand out the DBN to a PGM.
+    #     """
+    #     curr_pgm = copy.copy(self.init_model.value)
+    #     unrolled_pgm = None
+    #     pgms = []
+    #     for t in range(num_steps):
+    #         new_pgm = pgm.rename_pgm(curr_pgm, "_%d" %(t))
+    #         pgms.append(new_pgm)
+    #     print "pgms: "
+    #     for p in pgms:
+    #         print p
+    #         for n in p.variables:
+    #             print n, n.__name__
+    #         print "-" * 15
+    #     print "init model: "
+    #     print self.init_model
+    #     for t in self.init_model.variables:
+    #         print t, t.__name__
+    #     return pgms
         
             
             
