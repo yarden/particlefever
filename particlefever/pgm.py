@@ -19,7 +19,7 @@ class PGM:
         """
         markov_blanket = get_markov_blanket(node, self)
         return markov_blanket
-
+    
     def __repr__(self):
         return self.__str__(self)
 

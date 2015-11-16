@@ -130,7 +130,6 @@ class DBN:
                 # ...
         self.advance_time(next_model)
 
-
     def unroll_to_pgm(self, model_func, num_steps):
         """
         Unroll DBN to PGM.
