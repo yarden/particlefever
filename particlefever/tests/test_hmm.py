@@ -28,7 +28,6 @@ def hmm_with_pyhsmm():
     pass
 
 
-
 def hmm_with_partfever():
     """
     Run inference using particle fever.
