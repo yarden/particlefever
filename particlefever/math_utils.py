@@ -26,34 +26,30 @@ def sample_multinomial_logprobs(log_probs):
     return np.nan
 
 
-class Multinomial(object):
-    def __init__(self, params):
-        self._params = params
+def log_multinomial_coeff(counts):
+    return log_factorial(sum(counts)) - \
+           sum(log_factorial(c) for c in counts)
 
-    def pmf(self, counts):
-        if not(len(counts)==len(self._params)):
-            raise ValueError("Dimensionality of count vector is incorrect")
-        prob = 1.
-        for i,c in enumerate(counts):
-            prob *= self._params[i]**counts[i]
-        return prob * math.exp(self._log_multinomial_coeff(counts))
+def log_factorial(num):
+    if not round(num) == num and num > 0:
+        raise ValueError("Can only compute the factorial of positive ints")
+    return sum(math.log(n) for n in xrange(1,num+1))
 
-    def log_pmf(self,counts):
-        if not(len(counts)==len(self._params)):
-            raise ValueError("Dimensionality of count vector is incorrect")
-        prob = 0.
-        for i,c in enumerate(counts):
-            prob += counts[i]*math.log(self._params[i])
-        return prob + self._log_multinomial_coeff(counts)
+def multinomial_logpmf(counts, params):
+    if not (len(counts) == len(params)):
+        raise ValueError("Dimensionality of count vector is incorrect")
+    prob = 0.
+    #for i, c in enumerate(counts):
+    for i in xrange(len(counts)):
+        prob += counts[i] * math.log(params[i])
+    return prob + log_multinomial_coeff(counts)
 
-    def _log_multinomial_coeff(self, counts):
-        return self._log_factorial(sum(counts)) - \
-               sum(self._log_factorial(c) for c in counts)
-
-    def _log_factorial(self, num):
-        if not round(num)==num and num > 0:
-            raise ValueError("Can only compute the factorial of positive ints")
-        return sum(math.log(n) for n in range(1,num+1))
-
-
+def multinomial_pmf(counts, params):
+    if not(len(counts) == len(params)):
+        raise ValueError("Dimensionality of count vector is incorrect")
+    prob = 1.
+    #for i,c in enumerate(counts):
+    for i in xrange(len(counts)):
+        prob *= params[i]**counts[i]
+    return prob * math.exp(log_multinomial_coeff(counts))
 
