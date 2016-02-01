@@ -26,8 +26,7 @@ setup(name = 'particlefever',
       keywords = ['science', 'bayesian', 'inference', 'mcmc',
                   'monte-carlo'],
       install_requires = [
-          "Cython",
-          "pyhsmm"],
+          "Cython"],
       classifiers = [
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
