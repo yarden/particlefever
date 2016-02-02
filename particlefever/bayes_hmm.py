@@ -64,19 +64,53 @@ def log_score_hidden_state_trajectory(hidden_trajectory,
     """
     Score hidden state assignment of a single node, given observations,
     transition matrix, output matrix, and initial state probabilities.
-
     Return a vector of log scores:
 
     log[P(hidden_trajectory | observations, trans_mat, obs_mat, init_probs)]
     """
     num_obs = observations.shape[0]
-    log_scores = np.zeros((0, num_obs))
-    log_scores[0] = np.log(hidden_state_trajectory)
-    for n in xrange(1, num_obs):
-        # the score of a state on the previous state,
-        # the state's output, and the next state
-        # score the current assignment; based on multinomial
-        log_score[n] = None
+    log_scores = np.zeros(num_obs, dtype=np.float64)
+    # handle special case of single observation
+    # the score is the probability of being
+    # in this initial state and emitting the single observation
+    init_hidden_state = hidden_trajectory[0]
+    # initial observation
+    init_out = observations[0]
+    if num_obs == 1:
+        # prob. of being in this initial state plus
+        # times prob. of observing given output
+        log_scores[0] = \
+          np.log(init_probs[init_hidden_state]) + \
+          np.log(out_mat[init_hidden_state, init_out])
+        return log_scores
+    # score initial state: it depends on its output and
+    # the next hidden state.
+    # prob. of being in initial hidden state times 
+    # prob. of observing output given initial state
+    log_scores[0] = \
+      np.log(init_probs[init_hidden_state]) + \
+      np.log(out_mat[init_hidden_state, init_out])
+    ### vectorized version
+    log_scores[1:] = \
+      np.log(trans_mat[hidden_trajectory[0:-1],
+                       hidden_trajectory[1:]]) + \
+      np.log(out_mat[hidden_trajectory[1:],
+                     observations[1:]])
+    return log_scores
+    # for n in xrange(1, num_obs):
+    #     # the score of a state on the previous state,
+    #     # the state's output, and the next state
+    #     prev_hidden_state = hidden_state_trajectory[n - 1]
+    #     curr_hidden_state = hidden_state_trajectory[n]
+    #     out_state = observations[curr_hidden_state]
+    #     # score transition from previous to current state:
+    #     # P(curr_state | prev_state, trans_mat)
+    #     log_score_prev_trans = trans_mat[prev_hidden_state, curr_hidden_state]
+    #     # score the current output:
+    #     # P(curr_out | curr_state)
+    #     log_score_output = np.log(out_mat[curr_hidden_state])
+    #     # final log score
+    #     log_scores[n] = log_score_prev_trans + log_score_output 
         
 
 if __name__ == "__main__":
