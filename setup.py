@@ -24,10 +24,10 @@ setup(name = 'particlefever',
       packages = ['particlefever'],
       platforms = 'ALL',
       keywords = ['science', 'bayesian', 'inference', 'mcmc',
-                  'monte-carlo'],
+                  'probabilistic-modeling', 'time-series',
+                  'particle-filtering', 'monte-carlo'],
       install_requires = [
-          "Cython",
-          "pyhsmm"],
+          "Cython"],
       classifiers = [
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
