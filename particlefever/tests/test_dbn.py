@@ -17,8 +17,7 @@ import particlefever.dbn as dbn
 import particlefever.node as node
 
 # define a DBN
-my_dbn = dbn.DBN("rain_umbrella")
-
+# ...
 
 # dnroll it into a PGM
 # ...
