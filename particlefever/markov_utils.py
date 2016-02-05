@@ -2,6 +2,7 @@
 ## Utilities related to Markov models
 ##
 import numpy as np
+from itertools import chain, product
 
 def sample_trans_mat_from_dirch(hyperparams):
     """
@@ -25,6 +26,40 @@ def sample_trans_mat_from_dirch(hyperparams):
         trans_mat[n, :] = row
     trans_mat = np.matrix(trans_mat)
     return trans_mat
+
+
+def cond_probs_np(sequences):
+    """
+    Calculate 1-step transitional probabilities from sequences.
+    Return dictionary mapping transitions to probabilities.
+    """
+    distinct = set(chain.from_iterable(sequences))
+    n = len(distinct)
+    # so that they will fit in an np.uint8    
+    assert(n < 256) 
+    coding = {j:i for i, j in enumerate(distinct)}
+    counts = np.zeros((n, n))
+    for seq in sequences:
+        coded_seq = np.fromiter((coding[i] for i in seq), dtype=np.uint8)
+        pairs = coded_seq[:-1] + n * coded_seq[1:]
+        counts += np.bincount(pairs, minlength=n*n).reshape(n, n)
+    totals = counts.sum(axis=0)
+    totals[totals == 0] = 1     # avoid division by zero
+    probs = counts / totals
+    return {(a, b): p for a, b in product(distinct, repeat=2) 
+            for p in (probs[coding[b], coding[a]],) if p}
+
+
+def count_trans_mat(seq, shape):
+    """
+    Generate transition matrix counts. 
+    """
+    counts_matrix = np.zeros(shape)
+    flat_coords = np.ravel_multi_index((seq[:-1], seq[1:]),
+                                       counts_matrix.shape)
+    return np.bincount(flat_coords,
+                       minlength=counts_matrix.size).reshape(counts_matrix.shape)
+
 
 
 if __name__ == "__main__":

@@ -52,29 +52,62 @@ class DiscreteBayesHMM:
         # choose transition and emission matrices
         self.trans_mat = None
 
+        
 ##    
 ## sampling functions
 ##
-def sample_init_state(next_state, init_state_prior):
+def sample_init_state(init_state_hyperparams):
     """
-    Sample assignment of initial state given initial state prior.
-    Assume initial state prior is a Dirichlet. Assume S_0 is the
-    Dirichlet parameter that determines value of the initial state
-    S_1:
+    Sample assignment of initial state prior given initial state
+    hyperparameters.
+    """
+    return np.random.multinomial(init_state_hyperparams)
+
+def sample_init_state_prior(init_state, init_state_prior_hyperparams):
+    """
+    Assume S_0 is the Dirichlet parameter that determines
+    value of the initial state S_1. Sample from its
+    conditional distribution:
 
     P(S_0 | S_1) \propto P(S_1 | S_0)P(S_0)
-
-    where P(S_0) ~ Dir(init_state_prior),
-          P(S_1 | S_0) ~ Bern(S_1)
-
-    P(S_0 | S_1) is a Dirichlet with +1 added to
-    the ith entry of init_state_prior, where S_1 is ith state.
     """
-    prior_counts = init_state_prior.copy()
-    # add 1 to relevant element of prior
-    prior_counts[next_state] + 1
-    sampled_init_state = np.random.dirichlet(prior_counts)
-    return sampled_init_state
+    init_hyperparams = init_state_prior_hyperparams.copy()
+    init_hyperparams[init_state] += 1
+    return np.random.dirichlet(init_hyperparams)
+
+def sample_next_hidden_state(prev_hidden_state,
+                             trans_mat):
+    """
+    Sample next hidden state given transition matrix.
+
+    P(S_t | S_t-1, T)
+    """
+    next_hidden_state = \
+      np.random.multinomial(1, trans_mat[prev_hidden_state, :])
+    return next_hidden_state
+
+def sample_out_state(hidden_state, out_mat):
+    out_state = np.random.multinomial(1, out_mat[hidden_state, :])
+    return out_state
+
+def sample_trans_mat(hidden_state_trajectory,
+                     trans_hyperparams):
+    """
+    Sample transition matrix.
+    """
+    # here compute the matrix transition counts (using
+    # bincount.)
+    counts_mat = bincount()
+    # sample new transition matrix by iterating through
+    # rows
+    sampled_trans_mat = np.zeros((trans_hyperparams.shape[0],
+                                  trans_hyperparams.shape[1]))
+    for row in counts_mat:
+        x = sampled_trans_mat[:, ]
+        
+
+    
+    
 
 ##
 ## scoring functions
