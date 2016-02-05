@@ -1,0 +1,11 @@
+1. This suggested solution of using the previous variable's .value to make discrete Markov chain
+will not work:
+
+http://stackoverflow.com/questions/22636974/how-can-i-make-a-discrete-state-markov-model-with-pymc
+
+Because in pymc3, there's no .value for random variables, as this issue says (http://stackoverflow.com/questions/31485354/accessing-value-of-a-random-variable-in-pymc3).  Why not?
+
+2. What happened to all the density functions, e.g. binomial_like, in PyMC3?
+
+3. What happend to Lambda from PyMC2?
+
