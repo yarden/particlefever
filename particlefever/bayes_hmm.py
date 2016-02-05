@@ -50,12 +50,42 @@ class DiscreteBayesHMM:
         # choose initial state
         self.hidden_trajectory[0] = np.random.multinomial(1, self.init_probs)
         # choose transition and emission matrices
-        self.trans_mat
-        pass
+        self.trans_mat = None
 
 ##    
+## sampling functions
+##
+def sample_init_state(next_state, init_state_prior):
+    """
+    Sample assignment of initial state given initial state prior.
+    Assume initial state prior is a Dirichlet. Assume S_0 is the
+    Dirichlet parameter that determines value of the initial state
+    S_1:
+
+    P(S_0 | S_1) \propto P(S_1 | S_0)P(S_0)
+
+    where P(S_0) ~ Dir(init_state_prior),
+          P(S_1 | S_0) ~ Bern(S_1)
+
+    P(S_0 | S_1) is a Dirichlet with +1 added to
+    the ith entry of init_state_prior, where S_1 is ith state.
+    """
+    prior_counts = init_state_prior.copy()
+    # add 1 to relevant element of prior
+    prior_counts[next_state] + 1
+    sampled_init_state = np.random.dirichlet(prior_counts)
+    return sampled_init_state
+
+##
 ## scoring functions
 ##
+def log_score_joint():
+    """
+    Score full joint model.
+    """
+    pass
+
+
 def log_score_hidden_state_trajectory(hidden_trajectory,
                                       observations,
                                       trans_mat,
@@ -66,7 +96,7 @@ def log_score_hidden_state_trajectory(hidden_trajectory,
     transition matrix, output matrix, and initial state probabilities.
     Return a vector of log scores:
 
-    log[P(hidden_trajectory | observations, trans_mat, obs_mat, init_probs)]
+    log[P(hidden_trajectory | observations, trans_mat, obs_mat, init_probs])
     """
     num_obs = observations.shape[0]
     log_scores = np.zeros(num_obs, dtype=np.float64)
