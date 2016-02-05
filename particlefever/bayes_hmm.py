@@ -97,16 +97,21 @@ def sample_trans_mat(hidden_state_trajectory,
     """
     # here compute the matrix transition counts (using
     # bincount.)
-    counts_mat = bincount()
+    trans_mat_shape = (trans_hyperparams.shape[0],
+                       trans_hyperparams.shape[0])
+    counts_mat = \
+      markov_utils.count_trans_mat(hidden_state_trajectory,
+                                   trans_mat_shape)
     # sample new transition matrix by iterating through
     # rows
     sampled_trans_mat = np.zeros((trans_hyperparams.shape[0],
                                   trans_hyperparams.shape[1]))
-    for row in counts_mat:
-        x = sampled_trans_mat[:, ]
-        
-
-    
+    for n in xrange(sampled_trans_mat.shape[0]):
+        # add counts from likelihood (counts matrix) and
+        # from hyperparameters
+        trans_row_params = counts_mat[n, :] + trans_hyperparams[n, :]
+        sampled_trans_mat[n, :] = np.random.dirichlet(trans_row_params)
+    return sampled_trans_mat
     
 
 ##
