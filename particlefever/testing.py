@@ -12,6 +12,7 @@ import scipy.stats
 import particlefever
 import particlefever.math_utils as math_utils
 import particlefever.bayes_hmm as bayes_hmm
+import particlefever.sampler as sampler
 
 class TestGeneralScoring(unittest.TestCase):
     """
@@ -34,13 +35,16 @@ class TestGeneralScoring(unittest.TestCase):
           "multinomial and binomial logpmfs give different answers."
 
 
-class TestDiscreteBayesHMMScoring(unittest.TestCase):
+class TestDiscreteBayesHMM(unittest.TestCase):
     """
     Test discrete Bayesian HMM scoring functions.
     """
+    def setUp(self):
+        self.simple_hmm = bayes_hmm.DiscreteBayesHMM(2, 2)
+        
     def test_init_hmm(self):
         """
-        Test initialization of an HMM
+        Test initialization of an HMM.
         """
         # initialize 2-state 2-output HMM
         num_hidden_states = 2
@@ -61,7 +65,24 @@ class TestDiscreteBayesHMMScoring(unittest.TestCase):
         print default_hmm
         default_hmm.initialize()
         print default_hmm
-        
+        # initialize 3-state 2-output HMM
+        num_hidden_states = 3
+        num_outputs = 2
+        default_hmm = bayes_hmm.DiscreteBayesHMM(num_hidden_states,
+                                                 num_outputs)
+        print "3-state 2-output HMM: "
+        print default_hmm
+        default_hmm.initialize()
+        print default_hmm
+
+    def test_gibbs_inference(self):
+        """
+        Test Gibbs sampling in HMM.
+        """
+        data = np.array([0, 1, 0, 1, 0, 0, 0, 0])
+        gibbs_obj = sampler.DiscreteBayesHMMGibbs(self.simple_hmm)
+        gibbs_obj.sample(data)
+
     def test_score_hidden_state_trajectory(self):
         """
         Test scoring of hidden state trajectory.
@@ -88,9 +109,8 @@ class TestDiscreteBayesHMMScoring(unittest.TestCase):
         assert (log_score1 > log_score2), "Initial hidden state 0 more favorable."
         # score larger observations
         observations1 = np.array([0, 1, 0, 1])
-        
-          
-        
+
+
 
 if __name__ == "__main__":
     unittest.main()
