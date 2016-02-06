@@ -26,7 +26,6 @@ class Gibbs(Sampler):
     """
     def __init__(self, model):
         self.model = model
-        self.hidden_trajectories = []
 
     def sample(self, num_iters=1000, burn_in=100, lag=2):
         """
