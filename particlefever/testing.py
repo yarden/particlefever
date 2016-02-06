@@ -79,7 +79,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         """
         Test Gibbs sampling in HMM.
         """
-        data = np.array([0, 1, 0, 1, 0, 0, 0, 0])
+        data = np.array([0, 1]*20 + [1, 1]*20)
         gibbs_obj = sampler.DiscreteBayesHMMGibbs(self.simple_hmm)
         gibbs_obj.sample(data)
 
