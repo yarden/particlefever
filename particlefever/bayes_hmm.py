@@ -14,23 +14,30 @@ class DiscreteBayesHMM:
     """
     Discrete Bayesian HMM.
     """
-    def __init__(self, init_probs, trans_mat, out_mat,
-                 num_hidden_states,
-                 num_outputs,
+    def __init__(self, num_hidden_states, num_outputs,
                  init_state_hyperparams=None,
                  trans_mat_hyperparams=None,
                  out_mat_hyperparams=None):
         self.model_type = "discrete_bayes_hmm"
-        self.num_hidden_states = num_hidden_States
-        self.trans_mat = trans_mat
-        self.out_mat = out_mat
+        # HMM state
+        self.num_hidden_states = num_hidden_states
+        self.num_outputs = num_outputs
+        # hidden state assignments
+        self.hidden_trajectory = np.zeros((self.num_hidden_states,
+                                           self.num_hidden_states))
+        self.init_state = 0
+        self.hidden_state_trajectory = 0
+        self.out_state_trajectory = 0
+        self.trans_mat = np.zeros((self.num_hidden_states,
+                                   self.num_hidden_states))
+        self.out_mat = np.zeros((self.num_outputs,
+                                 self.num_outputs))
         # hyperparameters for prior on initial state
         self.default_init_state_hyperparam = 1
         self.init_state_hyperparams = init_state_hyperparams
         if self.init_state_hyperparams is None:
-            self.init_state_hyperparam = \
-              np.ones((num_states,
-                       num_outputs)) * self.default_init_state_hyperparam
+            self.init_state_hyperparams = np.ones(self.num_outputs)
+            self.init_state_hyperparams *= self.default_init_state_hyperparam
         # hyperparameters for prior on transition matrix
         self.trans_mat_hyperparams = trans_mat_hyperparams
         # hypeperameters for prior on output matrix
@@ -42,32 +49,34 @@ class DiscreteBayesHMM:
         # initialize priors if none given
         self.trans_mat_hyperparams = trans_mat_hyperparams
         if self.trans_mat_hyperparams is None:
-            self.trans_mat_hyperparams = np.ones((num_states, num_states))
             self.trans_mat_hyperparams = \
-              self.trans_hyperprams * self.default_trans_mat_hyperparam
+              np.ones((num_hidden_states, num_hidden_states))
+            self.trans_mat_hyperparams *= self.default_trans_mat_hyperparam
         self.out_mat_hyperparams = out_mat_hyperparams
         if self.out_mat_hyperparams is None:
-            self.out_mat_hyperparams = np.ones((num_states, num_outputs))
-            self.out_mat_hyperparams = \
-              self.out_mat_hyperparams * self.default_out_mat_hyperparam
-        # HMM state
-        # hidden state assignments
-        self.hidden_trajectory = np.zeros((self.num_hidden_states,
-                                           self.num_hidden_states))
-        self.init_state = 0
-        self.hidden_state_trajectory = 0
-        self.out_state_trajectory = 0
-        self.trans_mat = np.zeros((self.num_hidden_states,
-                                   self.num_hidden_states))
-        self.out_mat = np.zeros((self.num_outputs,
-                                 self.num_outputs))
+            self.out_mat_hyperparams = np.ones((num_hidden_states,
+                                                num_outputs))
+            self.out_mat_hyperparams *= self.default_out_mat_hyperparam
+
+    def __str__(self):
+        return "DiscreteBayesHMM(num_states=%d, num_outputs=%d, " \
+               "trans_mat=%s, out_mat=%s)" \
+               %(self.num_hidden_states,
+                 self.num_outputs,
+                 self.trans_mat,
+                 self.out_mat)
+
+    def __repr__(self):
+        return self.__str__()
 
     def initialize(self):
         """
         initialize to random model.
         """
-        # choose initial state
-        self.init_state = self.sample_init_state(self.init_state_hyperparams)
+        # choose initial state probabilities
+        self.init_state_probs = np.random.dirichlet(self.init_state_hyperparams)
+        # choose initial state based on these probabilities
+        self.init_state = sample_init_state(self.init_state_probs)
         # choose transition matrix
         self.trans_mat = init_trans_mat(self.trans_mat_hyperparams)
         # choose observation matrix
@@ -88,9 +97,9 @@ def init_trans_mat(trans_mat_hyperparams):
     return trans_mat
 
 def init_out_mat(out_mat_hyperparams):
-    out_mat = np.zeros((out_mat_hyperparams.shape[1],
+    out_mat = np.zeros((out_mat_hyperparams.shape[0],
                         out_mat_hyperparams.shape[1]))
-    for n in xrange(out_mat_hyperparams.shape[1]):
+    for n in xrange(out_mat_hyperparams.shape[0]):
         out_mat[n, :] = np.random.dirichlet(out_mat_hyperparams[n, :])
     return out_mat
         
@@ -102,7 +111,7 @@ def sample_init_state(init_state_probs):
     Sample assignment of initial state prior given initial state
     hyperparameters.
     """
-    return np.random.multinomial(init_state_probs)
+    return np.random.multinomial(1, init_state_probs)
 
 def sample_init_state_prior(init_state, init_state_prior_hyperparams):
     """

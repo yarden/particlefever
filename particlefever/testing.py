@@ -38,6 +38,30 @@ class TestDiscreteBayesHMMScoring(unittest.TestCase):
     """
     Test discrete Bayesian HMM scoring functions.
     """
+    def test_init_hmm(self):
+        """
+        Test initialization of an HMM
+        """
+        # initialize 2-state 2-output HMM
+        num_hidden_states = 2
+        num_outputs = 2
+        default_hmm = bayes_hmm.DiscreteBayesHMM(num_hidden_states,
+                                                 num_outputs)
+        print "2-state 2-output HMM: "
+        print default_hmm
+        print "initializing: "
+        default_hmm.initialize()
+        print default_hmm
+        # initialize 2-state 3-output HMM
+        num_hidden_states = 2
+        num_outputs = 3
+        default_hmm = bayes_hmm.DiscreteBayesHMM(num_hidden_states,
+                                                 num_outputs)
+        print "2-state 3-output HMM: "
+        print default_hmm
+        default_hmm.initialize()
+        print default_hmm
+        
     def test_score_hidden_state_trajectory(self):
         """
         Test scoring of hidden state trajectory.
