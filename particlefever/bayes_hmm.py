@@ -105,7 +105,6 @@ class DiscreteBayesHMM:
             self.outputs = np.zeros(self.data_len, dtype=np.int32)
             for n in xrange(self.data_len):
                 out_probs = self.out_mat[self.hidden_state_trajectory[n], :]
-                print out_probs, "<"
                 self.outputs[n] = np.random.multinomial(1, out_probs).argmax()
 ##
 ## initialization functions
