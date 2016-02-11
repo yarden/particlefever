@@ -29,13 +29,15 @@ class CRF:
     G_0 ~ DP(gamma, H)
     G_j ~ DP(alpha_0, G_0)
     """
-    def __init__(self, gamma, alpha, num_groups, G_0):
+    def __init__(self, gamma, alpha, num_groups, G_0, H):
         self.gamma = gamma
         self.alpha = alpha
         # number of groups (or restaurants)
         self.num_groups = num_groups
-        # the global measure
+        # the global DP
         self.G_0 = G_0
+        # the global DP's base measure
+        self.H = H
         # global dish values (across all groups)
         self.all_dishes = []
         ##
@@ -52,13 +54,15 @@ class CRF:
         ##
         # number of customers per table
         self.num_cust_per_table = init_ordered_dict(self.num_groups)
-        # number of dishes 
+        # number of dishes across all groups
+        self.all_dish_counts = []
+        # total number of occupied tables
+        self.total_occupied_tables = 0
 
     def __str__(self):
         num_total_customers = np.sum([np.sum(self.num_cust_per_table[g]) \
                                       for g in self.num_cust_per_table])
-        num_total_tables = np.sum([len(self.num_cust_per_table[g]) \
-                                   for g in self.num_cust_per_table])
+        num_total_tables = self.total_occupied_tables
         return "CRF(num_total_customers=%d, num_total_tables=%d, " \
                "num_groups=%d)" %(num_total_customers,
                                   num_total_tables,
@@ -88,41 +92,54 @@ class CRF:
         # to a new table
         table_weights = table_counts + [self.alpha]
         table_weights /= (curr_cust - 1 + self.alpha)
-        print "Table weights: ", table_weights
+        print "table weights: ", table_weights
         # draw table assignment
         table_assignment = np.random.multinomial(1, table_weights).argmax()
-        if table_assignment == (num_tables - 1):
+        if (table_assignment == (num_tables - 1)) or num_tables == 0:
             # customer joins new table, so draw new
             # parameter value
-            new_param = self.sample_prior_table_param()
-            self.
-            self.dish_inds[g].append(new_param)
+            new_dish = self.sample_prior_dish()
+            self.all_dishes.append(new_dish)
+            self.dish_inds[g].append(new_dish)
             # add customer to table counts
             self.num_cust_per_table[g].append(1)
-            # update parameter counts across all tables
-            # TODO: fill this in 
-            pass
+            self.total_occupied_tables += 1
         else:
             # existing table was chosen, so update
             # number of customers seated in it
             self.num_cust_per_table[table_assignment] += 1
+        return table_assignment 
 
-    def sample_prior_table_param(self):
+    def sample_prior_dish(self):
         """
         Sample new table parameter.
         """
         # sample existing parameter in proportion to their
-        # frequency and entirely new parameter in proportion
+        # frequency or entirely new parameter in proportion
         # to \gamma, the concentration parameter of the global DP
-
-        # first calculate the frequency of dishes across groups
-        dish_frequencies = 
+        dish_weights = np.array(self.all_dish_counts + [self.gamma])
+        dish_weights /= (self.total_occupied_tables + self.gamma)
+        print "dish weights: ", dish_weights
+        dish_assignment = np.random.multinomial(1, dish_weights).argmax()
+        print "dish assignment: ", dish_assignment
+        num_dishes = len(self.all_dishes)
+        if (dish_assignment == (num_dishes - 1)) or num_dishes == 0:
+            # draw new dish parameter
+            new_dish = self.H()
+            self.all_dishes.append(new_dish)
+            # update dish frequency popularity
+            self.all_dish_counts.append(1)
+        else:
+            # we've chosen an existing dish
+            self.all_dish_counts[dish_assignment] += 1
+            # update dish frequency popularity
+        return dish_assignment
         
-    def sample_prior(self):
+    def sample_prior(self, g):
         """
         Sample from prior.
         """
-        table_assignments = self.sample_table_assignments()
+        table_assignments = self.sample_prior_table_assignment(g)
         print "table assignments: "
         print table_assignments
 
@@ -132,7 +149,12 @@ if __name__ == "__main__":
     alpha = 1
     num_groups = 3
     G_0 = None
-    crf_obj = CRF(gamma, alpha, num_groups, G_0)
+    H = lambda: np.random.normal()
+    crf_obj = CRF(gamma, alpha, num_groups, G_0, H)
     print crf_obj
+    num_samples = 5
+    for n in xrange(num_samples):
+        for g in xrange(num_groups):
+            crf_obj.sample_prior(g)
 
     
