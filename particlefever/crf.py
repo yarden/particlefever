@@ -145,7 +145,9 @@ def plot_crf(crf_obj):
     """
     Plot CRF.
     """
-    crf_obj.num_groups
+    for g in xrange(crf_obj.num_groups):
+        plt.subplot(crf_obj.num_groups, 1, g + 1)
+        crf_obj.num_groups
 
 
 if __name__ == "__main__":
