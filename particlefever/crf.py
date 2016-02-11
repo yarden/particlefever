@@ -10,7 +10,7 @@ import numpy as np
 
 import particlefever
 
-def init_ordered_dict(num_groups):
+def init_ordered_dict(num_groups, dtype=np.int32):
     """
     Initialize ordered dictionary indexed
     by a number from 0 to num_groups-1, with
@@ -18,7 +18,7 @@ def init_ordered_dict(num_groups):
     """
     od = OrderedDict()
     for g in xrange(num_groups):
-        od[g] = []
+        od[g] = np.array([], dtype=dtype)
     return od
 
 class CRF:
@@ -30,8 +30,8 @@ class CRF:
     G_j ~ DP(alpha_0, G_0)
     """
     def __init__(self, gamma, alpha, num_groups, G_0, H):
-        self.gamma = gamma
-        self.alpha = alpha
+        self.gamma = float(gamma)
+        self.alpha = float(alpha)
         # number of groups (or restaurants)
         self.num_groups = num_groups
         # the global DP
@@ -39,7 +39,7 @@ class CRF:
         # the global DP's base measure
         self.H = H
         # global dish values (across all groups)
-        self.all_dishes = []
+        self.all_dishes = np.array([])
         ##
         ## indices
         ##
@@ -55,7 +55,7 @@ class CRF:
         # number of customers per table
         self.num_cust_per_table = init_ordered_dict(self.num_groups)
         # number of dishes across all groups
-        self.all_dish_counts = []
+        self.all_dish_counts = np.array([], dtype=np.int32)
         # total number of occupied tables
         self.total_occupied_tables = 0
 
@@ -64,9 +64,12 @@ class CRF:
                                       for g in self.num_cust_per_table])
         num_total_tables = self.total_occupied_tables
         return "CRF(num_total_customers=%d, num_total_tables=%d, " \
-               "num_groups=%d)" %(num_total_customers,
-                                  num_total_tables,
-                                  self.num_groups)
+               "num_groups=%d,\ncust_per_table=%s,\ndish_inds=%s)" \
+               %(num_total_customers,
+                 num_total_tables,
+                 self.num_groups,
+                 str(self.num_cust_per_table),
+                 str(self.dish_inds))
 
     def __repr__(self):
         return self.__str__()
@@ -90,45 +93,41 @@ class CRF:
         # weight of table assignments to each of the existing
         # tables, plus a weight for being assigned
         # to a new table
-        table_weights = table_counts + [self.alpha]
+        table_weights = np.array(list(table_counts) + [self.alpha])
         table_weights /= (curr_cust - 1 + self.alpha)
-        print "table weights: ", table_weights
         # draw table assignment
         table_assignment = np.random.multinomial(1, table_weights).argmax()
-        if (table_assignment == (num_tables - 1)) or num_tables == 0:
+        if (table_assignment == num_tables) or (num_tables == 0):
             # customer joins new table, so draw new
             # parameter value
             new_dish = self.sample_prior_dish()
-            self.all_dishes.append(new_dish)
-            self.dish_inds[g].append(new_dish)
+            self.dish_inds[g] = np.append(self.dish_inds[g], new_dish)
             # add customer to table counts
-            self.num_cust_per_table[g].append(1)
+            self.num_cust_per_table[g] = np.append(self.num_cust_per_table[g], 1)
             self.total_occupied_tables += 1
         else:
             # existing table was chosen, so update
             # number of customers seated in it
-            self.num_cust_per_table[table_assignment] += 1
+            self.num_cust_per_table[g][table_assignment] += 1
         return table_assignment 
 
     def sample_prior_dish(self):
         """
-        Sample new table parameter.
+        Sample new dish parameter.
         """
         # sample existing parameter in proportion to their
         # frequency or entirely new parameter in proportion
         # to \gamma, the concentration parameter of the global DP
-        dish_weights = np.array(self.all_dish_counts + [self.gamma])
+        dish_weights = np.array(list(self.all_dish_counts) + [self.gamma])
         dish_weights /= (self.total_occupied_tables + self.gamma)
-        print "dish weights: ", dish_weights
         dish_assignment = np.random.multinomial(1, dish_weights).argmax()
-        print "dish assignment: ", dish_assignment
         num_dishes = len(self.all_dishes)
-        if (dish_assignment == (num_dishes - 1)) or num_dishes == 0:
+        if (dish_assignment == num_dishes) or (num_dishes == 0):
             # draw new dish parameter
             new_dish = self.H()
-            self.all_dishes.append(new_dish)
+            self.all_dishes = np.append(self.all_dishes, new_dish)
             # update dish frequency popularity
-            self.all_dish_counts.append(1)
+            self.all_dish_counts = np.append(self.all_dish_counts, 1)
         else:
             # we've chosen an existing dish
             self.all_dish_counts[dish_assignment] += 1
@@ -140,21 +139,28 @@ class CRF:
         Sample from prior.
         """
         table_assignments = self.sample_prior_table_assignment(g)
-        print "table assignments: "
-        print table_assignments
+
+
+def plot_crf(crf_obj):
+    """
+    Plot CRF.
+    """
+    crf_obj.num_groups
 
 
 if __name__ == "__main__":
-    gamma = 1
-    alpha = 1
+    gamma = 1.
+    alpha = 1.
     num_groups = 3
     G_0 = None
+#    np.random.seed(5000)
     H = lambda: np.random.normal()
     crf_obj = CRF(gamma, alpha, num_groups, G_0, H)
-    print crf_obj
-    num_samples = 5
+    num_samples = 50
     for n in xrange(num_samples):
         for g in xrange(num_groups):
             crf_obj.sample_prior(g)
+    print crf_obj
+            
 
     
