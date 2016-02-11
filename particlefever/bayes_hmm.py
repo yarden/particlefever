@@ -35,8 +35,8 @@ class DiscreteBayesHMM:
         # hidden state assignments
         self.hidden_trajectory = np.zeros((self.num_hidden_states,
                                            self.num_hidden_states))
-        self.hidden_state_trajectory = 0
-        self.out_state_trajectory = 0
+        self.hidden_state_trajectory = None
+        self.out_state_trajectory = None
         self.trans_mat = np.zeros((self.num_hidden_states,
                                    self.num_hidden_states))
         self.out_mat = np.zeros((self.num_outputs,
@@ -78,6 +78,31 @@ class DiscreteBayesHMM:
     def __repr__(self):
         return self.__str__()
 
+    def predict(self, num_steps):
+        """
+        Predict outputs and latent states.
+        """
+        if self.hidden_state_trajectory is None:
+            raise Exception, "Cannot predict; no hidden state trajectory."
+        last_hidden_state = self.hidden_state_trajectory[-1]
+        # make a vector representation of last hidden state
+        prev_state_probs = np.zeros(self.num_hidden_states)
+        prev_state_probs[last_hidden_state] = 1.
+        # predict transitions and subsequent outputs
+        predictions = np.zeros(num_steps)
+        # output probabilities
+        predicted_probs = np.zeros((num_steps, self.num_outputs))
+        for step in xrange(num_steps):
+            # calculate probabilities of being in
+            # states in next time step
+            curr_state_probs = prev_state_probs.dot(self.trans_mat)
+            # calculate output probabilities
+            curr_output_probs = curr_state_probs.dot(self.out_mat)
+            predicted_probs[step, :] = curr_output_probs
+            predictions[step] = np.random.multinomial(1, curr_output_probs).argmax()
+            prev_state_probs = curr_state_probs
+        return predictions
+
     def initialize(self, data=None):
         """
         initialize to random model.
@@ -101,11 +126,7 @@ class DiscreteBayesHMM:
                 prev_hidden_state = self.hidden_state_trajectory[n - 1]
                 self.hidden_state_trajectory[n] = \
                   np.random.multinomial(1, self.trans_mat[prev_hidden_state, :]).argmax()
-            # choose outputs
-            self.outputs = np.zeros(self.data_len, dtype=np.int32)
-            for n in xrange(self.data_len):
-                out_probs = self.out_mat[self.hidden_state_trajectory[n], :]
-                self.outputs[n] = np.random.multinomial(1, out_probs).argmax()
+            self.outputs = data
 ##
 ## initialization functions
 ##
@@ -130,7 +151,7 @@ def init_out_mat(out_mat_hyperparams):
 ## sampling functions
 ##
 def sample_new_hmm(old_hmm, data):
-    new_hmm = copy.copy(old_hmm)
+    new_hmm = copy.deepcopy(old_hmm)
     # sample initial state probs
     new_hmm.init_state_probs = \
       sample_init_state_prior(new_hmm.hidden_state_trajectory[0],
@@ -141,18 +162,18 @@ def sample_new_hmm(old_hmm, data):
     new_hmm.trans_mat = sample_trans_mat(new_hmm.hidden_state_trajectory,
                                          new_hmm.trans_mat_hyperparams)
     # sample hidden states
+    print "old hidden state: ", new_hmm.hidden_state_trajectory
     new_hmm.hidden_state_trajectory = \
       sample_hidden_states(new_hmm.hidden_state_trajectory,
                            new_hmm.trans_mat,
                            new_hmm.init_state_probs)
+    print "new hidden state: ", new_hmm.hidden_state_trajectory
+    raise Exception, "test..."
     # sample output matrix
     new_hmm.out_mat = sample_out_mat(new_hmm.outputs,
                                      new_hmm.hidden_state_trajectory,
                                      new_hmm.out_mat_hyperparams,
                                      new_hmm.num_hidden_states)
-    # sample outputs
-    new_hmm.outputs = sample_outputs(new_hmm.hidden_state_trajectory,
-                                     new_hmm.out_mat)
     return new_hmm
     
 
@@ -245,17 +266,6 @@ def sample_out_mat(outputs,
         sampled_out_mat[n, :] = \
           np.random.dirichlet(out_counts + out_mat_hyperparams[n, :])
     return sampled_out_mat
-
-def sample_outputs(hidden_state_trajectory, out_mat):
-    """
-    Sample outputs.
-    """
-    outputs = np.zeros(hidden_state_trajectory.shape[0],
-                       dtype=np.int32)
-    for n in xrange(hidden_state_trajectory.shape[0]):
-        hidden_state = hidden_state_trajectory[n]
-        outputs[n] = np.random.multinomial(1, out_mat[hidden_state, :]).argmax()
-    return outputs
 
 ##
 ## scoring functions

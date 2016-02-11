@@ -46,11 +46,7 @@ class DiscreteBayesHMMGibbs(Sampler):
         self.samples.append(old_hmm)
         t1 = time.time()
         for n_iter in xrange(num_iters):
-#            print "old hmm: "
-#            print old_hmm
             new_hmm = bayes_hmm.sample_new_hmm(old_hmm, data)
-#            print "new hmm: "
-#            print new_hmm
             self.samples.append(new_hmm)
             old_hmm = new_hmm
         t2 = time.time()

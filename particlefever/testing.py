@@ -40,7 +40,15 @@ class TestDiscreteBayesHMM(unittest.TestCase):
     Test discrete Bayesian HMM scoring functions.
     """
     def setUp(self):
-        self.simple_hmm = bayes_hmm.DiscreteBayesHMM(2, 2)
+        trans_mat_hyperparams = np.ones((2, 2))
+        trans_mat_hyperparams *= 5
+        # put peaky prior on outputs
+        out_mat_hyperparams = np.ones((2, 2))
+        out_mat_hyperparams *= 0.8
+        self.simple_hmm = \
+          bayes_hmm.DiscreteBayesHMM(2, 2,
+                                     trans_mat_hyperparams=trans_mat_hyperparams,
+                                     out_mat_hyperparams=out_mat_hyperparams)
         
     def test_init_hmm(self):
         """
@@ -75,13 +83,64 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         default_hmm.initialize()
         print default_hmm
 
-    def test_gibbs_inference(self):
+    def _test_gibbs_inference(self):
         """
         Test Gibbs sampling in HMM.
         """
         data = np.array([0, 1]*20 + [1, 1]*20)
         gibbs_obj = sampler.DiscreteBayesHMMGibbs(self.simple_hmm)
         gibbs_obj.sample(data)
+        
+    def get_mean_preds(self, samples, num_preds=20):
+        all_preds = []
+        for curr_hmm in samples:
+            curr_hmm = samples[-1]
+            print curr_hmm.hidden_state_trajectory
+            preds = curr_hmm.predict(num_preds)
+            all_preds.append(preds)
+        all_preds = np.array(all_preds)
+        mean_preds = all_preds.mean(axis=0)
+        return mean_preds
+        
+    # def test_hmm_prediction(self):
+    #     # clamp seed to debug
+    #     #np.random.seed(3)
+    #     # data biased toward state 1
+    #     data = np.array([1, 1]*5)
+    #     print "data: ", data
+    #     gibbs_obj = sampler.DiscreteBayesHMMGibbs(self.simple_hmm)
+    #     gibbs_obj.sample(data)
+    #     mean_preds = self.get_mean_preds(gibbs_obj.samples)
+    #     print "predicting using sampled HMM"
+    #     print "mean preds: ", mean_preds
+    #     assert (mean_preds > 0.7).all(), \
+    #       "Expected all predictions to be output 1 with prob. > 0.7"
+    #     # compare this to an HMM with biased data toward state 0
+    #     data = np.array([0, 0]*5)
+    #     print "data: ", data
+    #     gibbs_obj = sampler.DiscreteBayesHMMGibbs(self.simple_hmm)
+    #     gibbs_obj.sample(data)
+    #     mean_preds = self.get_mean_preds(gibbs_obj.samples)
+    #     print "predicting using sampled HMM"
+    #     print "mean preds: ", mean_preds
+    #     assert (mean_preds < 0.3).all(), \
+    #       "Expected all predictions to be output 1 with prob. < 0.3"
+
+    def test_hmm_prediction_periodic(self):
+        print "\ntesting periodic predictions: "
+        # now test it with a periodic data set
+        data = np.array([0, 1]*20)
+        print "data: ", data
+        gibbs_obj = sampler.DiscreteBayesHMMGibbs(self.simple_hmm)
+        gibbs_obj.sample(data)
+        mean_preds = self.get_mean_preds(gibbs_obj.samples)
+        print "predicting using sampled HMM"
+        print "mean preds: ", mean_preds
+        raise Exception, "test"
+        
+        
+        
+        
 
     def test_score_hidden_state_trajectory(self):
         """
