@@ -162,10 +162,11 @@ def sample_new_hmm(old_hmm, data):
     new_hmm.trans_mat = sample_trans_mat(new_hmm.hidden_state_trajectory,
                                          new_hmm.trans_mat_hyperparams)
     # sample hidden states
-    print "old hidden state: ", new_hmm.hidden_state_trajectory
     new_hmm.hidden_state_trajectory = \
       sample_hidden_states(new_hmm.hidden_state_trajectory,
                            new_hmm.trans_mat,
+                           new_hmm.out_mat,
+                           new_hmm.outputs,
                            new_hmm.init_state_probs)
     print "new hidden state: ", new_hmm.hidden_state_trajectory
     raise Exception, "test..."
@@ -175,29 +176,41 @@ def sample_new_hmm(old_hmm, data):
                                      new_hmm.out_mat_hyperparams,
                                      new_hmm.num_hidden_states)
     return new_hmm
-    
 
 def sample_init_state_prior(init_state, init_state_hyperparams):
     """
-    Assume S_0 is the Dirichlet parameter that determines
+    Assume I is the Dirichlet parameter that determines
     value of the initial state S_1. Sample from its
     conditional distribution:
 
-    P(S_0 | S_1) \propto P(S_1 | S_0)P(S_0)
+    P(I | S_1) \propto P(S_1 | I)P(I)
     """
     init_hyperparams = init_state_hyperparams.copy()
     init_hyperparams[init_state] += 1
     return np.random.dirichlet(init_hyperparams)
     
-def sample_init_state(init_state_probs):
+def sample_init_state(init_state_probs, outputs, out_mat,
+                      next_state=None):
     """
     Sample assignment of initial state prior given initial state
     hyperparameters.
+
+    P(S_0 | I, Y_0, O_mat) = P(I)P(S_0 | I)P(Y_0 | S_0)P(S_1 | S_0)
     """
+    ### TODO: handle case where next state isn't available here
+    possible_outputs = np.arange(len(init_state_probs))
+    log_scores = \
+      # P(I): prior on initial state 
+      np.log(init_state_probs) + \
+      # P(S_0 | I): probability of choosing initial hiddden state
+      np.log(out_mat[possible_outputs, outputs[0])) + \
+    log_scores = [np.log() for n in xrange(len(init_state_probs))]
     return np.random.multinomial(1, init_state_probs).argmax()
 
 def sample_hidden_states(hidden_state_trajectory,
                          trans_mat,
+                         out_mat,
+                         outputs,
                          init_state_probs):
     """
     Sample new configuration of hidden states.
@@ -207,7 +220,13 @@ def sample_hidden_states(hidden_state_trajectory,
                                             num_hidden_states),
                                            dtype=np.int32)
     # sample initial state
-    hidden_state_trajectory[0] = sample_init_state(init_state_probs)
+    ###
+    ### TODO: handle case where there is only 1 latent state here
+    ###
+    hidden_state_trajectory[0] = sample_init_state(init_state_probs,
+                                                   outputs[0],
+                                                   out_mat,
+                                                   next_state=hidden_state_trajectory[1])
     for n in xrange(1, num_hidden_states):
         prev_hidden_state = hidden_state_trajectory[n - 1]
         hidden_state_trajectory[n] = \

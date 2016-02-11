@@ -1,11 +1,13 @@
 ##
 ## Statistics utilities
 ##
+import numpy as np
+
 import scipy
 import scipy.special
 from scipy.special import gammaln
 
-def C(alpha):
+def logC(alpha):
     """
     Following notation from:
     http://users.cecs.anu.edu.au/~ssanner/MLSS2010/Johnson1.pdf
@@ -22,5 +24,12 @@ def C(alpha):
     # compute C function in log form:
     logC = np.sum(gammaln(alpha)) - gammaln(np.sum(alpha))
     return logC
-      
+
+
+if __name__ == "__main__":
+    print "testing C function..."
+    alpha = np.array([1, 1])
+    counts = np.array([0, 0])
+    logC(alpha)
+
 
