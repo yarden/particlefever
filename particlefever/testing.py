@@ -41,7 +41,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
     """
     def setUp(self):
         trans_mat_hyperparams = np.ones((2, 2))
-        trans_mat_hyperparams *= 0.1
+        trans_mat_hyperparams *= 1.
         # put peaky prior on outputs
         out_mat_hyperparams = np.ones((2, 2))
         out_mat_hyperparams *= 0.1
@@ -93,15 +93,13 @@ class TestDiscreteBayesHMM(unittest.TestCase):
                                            hidden_state_trajectory,
                                            out_mat_hyperparams,
                                            num_hidden_states)
-        print "out_mat: "
-        print out_mat
-        
 
     def _test_gibbs_inference(self):
         """
         Test Gibbs sampling in HMM.
         """
-        data = np.array([0, 1]*20 + [1, 1]*20)
+        print "testing Gibbs sampling"
+        data = np.array([0, 1]*20)
         gibbs_obj = sampler.DiscreteBayesHMMGibbs(self.simple_hmm)
         gibbs_obj.sample(data)
         
@@ -110,6 +108,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         for curr_hmm in samples:
             curr_hmm = samples[-1]
             preds = curr_hmm.predict(num_preds)
+            print "preds: ", preds
             all_preds.append(preds)
         all_preds = np.array(all_preds)
         mean_preds = all_preds.mean(axis=0)
@@ -139,7 +138,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
     #     assert (mean_preds < 0.3).all(), \
     #       "Expected all predictions to be output 1 with prob. < 0.3"
 
-    def _test_hmm_prediction_periodic(self):
+    def test_hmm_prediction_periodic(self):
         print "\ntesting periodic predictions: "
         # now test it with a periodic data set
         data = np.array([0, 1]*20)
@@ -151,9 +150,6 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         print "mean preds: ", mean_preds
         print " --- "
         raise Exception, "test"
-        
-        
-        
         
 
     def test_score_hidden_state_trajectory(self):

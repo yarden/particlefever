@@ -157,23 +157,11 @@ def init_out_mat(out_mat_hyperparams):
 ##
 def sample_new_hmm(old_hmm, data):
     new_hmm = copy.deepcopy(old_hmm)
-    # sample initial state probs
-    new_hmm.init_state_probs = \
-      sample_init_state_prior(new_hmm.hidden_state_trajectory[0],
-                              new_hmm.init_state_hyperparams)
-    # sample initial state
-    next_state = None
-    if new_hmm.hidden_state_trajectory.shape[0] > 1:
-        next_state = new_hmm.hidden_state_trajectory[1]
-    new_hmm.init_state = sample_init_state(new_hmm.init_state_probs,
-                                           new_hmm.hidden_state_trajectory,
-                                           new_hmm.outputs,
-                                           new_hmm.trans_mat,
-                                           new_hmm.out_mat,
-                                           next_state=next_state)
-    # sample transition matrix
-    new_hmm.trans_mat = sample_trans_mat(new_hmm.hidden_state_trajectory,
-                                         new_hmm.trans_mat_hyperparams)
+    # sample output matrix
+    new_hmm.out_mat = sample_out_mat(new_hmm.outputs,
+                                     new_hmm.hidden_state_trajectory,
+                                     new_hmm.out_mat_hyperparams,
+                                     new_hmm.num_hidden_states)
     # sample hidden states
     if DEBUG:
         print "OLD HMM: "
@@ -201,11 +189,23 @@ def sample_new_hmm(old_hmm, data):
         print "new out mat: "
         print new_hmm.out_mat
         time.sleep(0.2)
-    # sample output matrix
-    new_hmm.out_mat = sample_out_mat(new_hmm.outputs,
-                                     new_hmm.hidden_state_trajectory,
-                                     new_hmm.out_mat_hyperparams,
-                                     new_hmm.num_hidden_states)
+    # sample transition matrix
+    new_hmm.trans_mat = sample_trans_mat(new_hmm.hidden_state_trajectory,
+                                         new_hmm.trans_mat_hyperparams)
+    # sample initial state probs
+    new_hmm.init_state_probs = \
+      sample_init_state_prior(new_hmm.hidden_state_trajectory[0],
+                              new_hmm.init_state_hyperparams)
+    # sample initial state
+    next_state = None
+    if new_hmm.hidden_state_trajectory.shape[0] > 1:
+        next_state = new_hmm.hidden_state_trajectory[1]
+    new_hmm.init_state = sample_init_state(new_hmm.init_state_probs,
+                                           new_hmm.hidden_state_trajectory,
+                                           new_hmm.outputs,
+                                           new_hmm.trans_mat,
+                                           new_hmm.out_mat,
+                                           next_state=next_state)
     return new_hmm
 
 def sample_init_state_prior(init_state, init_state_hyperparams):
@@ -245,6 +245,18 @@ def sample_init_state(init_state_probs,
     sampled_init_state = np.random.multinomial(1, probs).argmax()
     return sampled_init_state
 
+def count_out_mat(outputs, hidden_state_trajectory,
+                  num_hidden_states,
+                  num_possible_outputs):
+    """
+    Generate output counts matrix (num_hidden_states x num_possible_outputs).
+    """
+    count_mat = np.zeros((num_hidden_states, num_possible_outputs), dtype=np.int32)
+    seq_len = len(outputs)
+    for n in xrange(seq_len):
+        count_mat[hidden_state_trajectory[n], outputs[n]] += 1
+    return count_mat
+
 def sample_hidden_states(hidden_state_trajectory,
                          trans_mat,
                          out_mat,
@@ -258,6 +270,7 @@ def sample_hidden_states(hidden_state_trajectory,
     new_hidden_state_trajectory = np.zeros((num_hidden_states,
                                             num_hidden_states),
                                            dtype=np.int32)
+    seq_len = len(hidden_state_trajectory)
     # sample initial state
     next_state = None
     if hidden_state_trajectory.shape[0] > 1:
@@ -268,7 +281,7 @@ def sample_hidden_states(hidden_state_trajectory,
                                                    trans_mat,
                                                    out_mat,
                                                    next_state=next_state)
-    for n in xrange(1, num_hidden_states):
+    for n in xrange(1, seq_len):
         # Sample P(S_t | S_t-1, S_t+1, T, Y)
         # P(S_t | rest of variables) \propto T(s_t-1, s_t)T(s_t, s_t+1)O(y_t, S_t)
         prev_hidden_state = hidden_state_trajectory[n - 1]
@@ -324,14 +337,16 @@ def sample_out_mat(outputs,
     """
     num_outputs = out_mat_hyperparams.shape[1]
     sampled_out_mat = np.zeros((num_hidden_states, num_outputs))
+    # number of occurences of each output state
+    ###
+    ### TODO: this is wrong -- the out counts should be
+    ##        a num states by num outputs matrix
+    ###
+    out_counts = count_out_mat(outputs, hidden_state_trajectory,
+                               num_hidden_states, num_outputs)
     for n in xrange(num_hidden_states):
-        # number of occurences of each output state
-        out_counts = np.bincount(outputs, minlength=num_outputs)
-        print "OUT COUNTS: ", out_counts
-        print "sampling from dirichlet: "
-        print out_counts + out_mat_hyperparams[n, :]
         sampled_out_mat[n, :] = \
-          np.random.dirichlet(out_counts + out_mat_hyperparams[n, :])
+          np.random.dirichlet(out_counts[n, :] + out_mat_hyperparams[n, :])
     return sampled_out_mat
 
 ##
