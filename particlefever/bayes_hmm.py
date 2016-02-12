@@ -230,7 +230,7 @@ def sample_init_state(init_state_probs,
     Sample assignment of initial state prior given initial state
     hyperparameters.
 
-    P(S_0 | I, Y_0, O_mat) = P(S_0 | I)P(Y_0 | S_0)P(S_1 | S_0, T_mat)
+    P(S_0 | I, Y_0, O_mat) = P(S_0 | I)P(Y_0 | S_0)P(S_1 | S_0, T_mat)P(T_mat)
     """
     possible_hidden_states = np.arange(len(init_state_probs))
     log_scores = \
