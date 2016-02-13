@@ -281,11 +281,11 @@ def sample_hidden_states(hidden_state_trajectory,
                                                    trans_mat,
                                                    out_mat,
                                                    next_state=next_state)
+    possible_hidden_states = np.arange(len(init_state_probs))
     for n in xrange(1, seq_len):
         # Sample P(S_t | S_t-1, S_t+1, T, Y)
         # P(S_t | rest of variables) \propto T(s_t-1, s_t)T(s_t, s_t+1)O(y_t, S_t)
         prev_hidden_state = hidden_state_trajectory[n - 1]
-        possible_hidden_states = np.arange(len(init_state_probs))
         log_scores = \
           np.log(trans_mat[prev_hidden_state, possible_hidden_states]) + \
           np.log(out_mat[possible_hidden_states, outputs[n]])
