@@ -139,7 +139,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
     #     assert (mean_preds < 0.3).all(), \
     #       "Expected all predictions to be output 1 with prob. < 0.3"
 
-    def _test_hmm_prediction_periodic(self):
+    def test_hmm_prediction_periodic(self):
         print "\ntesting periodic predictions: "
         # now test it with a periodic data set
         data = np.array([0, 1]*20)
