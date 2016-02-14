@@ -34,15 +34,20 @@ class DiscreteBayesHMMGibbs(Sampler):
     def __repr__(self):
         return self.__str__()
 
-    def sample(self, data, num_iters=10000, burn_in=100, lag=5):
+    def sample(self, data, num_iters=10000, burn_in=100, lag=10,
+               init_hidden_states=True):
         """
         Run posterior sampling.
         """
         if self.model is None:
             raise Exception, "No model to run."
-        # initialize model
-        old_hmm = copy.copy(self.model)
-        old_hmm.initialize(data=data)
+        # initialize model if not initialized
+        # already
+        old_hmm = copy.deepcopy(self.model)
+        if old_hmm.hidden_state_trajectory is None:
+            old_hmm.initialize()
+        # add data
+        old_hmm.add_data(data, init_hidden_states=init_hidden_states)
         self.samples.append(old_hmm)
         t1 = time.time()
         for n_iter in xrange(num_iters):

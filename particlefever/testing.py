@@ -49,9 +49,11 @@ class TestDiscreteBayesHMM(unittest.TestCase):
     def setUp(self):
         trans_mat_hyperparams = np.ones((2, 2))
         trans_mat_hyperparams *= 1.
+        #trans_mat_hyperparams *= 1.
         # put peaky prior on outputs
         out_mat_hyperparams = np.ones((2, 2))
-        out_mat_hyperparams *= 3.739
+        #out_mat_hyperparams *= 3.739
+        out_mat_hyperparams *= 0.3
         self.simple_hmm = \
           bayes_hmm.DiscreteBayesHMM(2, 2,
                                      trans_mat_hyperparams=trans_mat_hyperparams,
@@ -101,7 +103,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
                                            out_mat_hyperparams,
                                            num_hidden_states)
 
-    def test_log_joint_scores(self):
+    def _test_log_joint_scores(self):
         """
         Test scoring of joint distribution.
         """
@@ -126,7 +128,8 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         ### direction?
         ###
         zero = np.power(10., -5)
-        one = 1 - zero
+        print "zero: ", zero
+        one = 1. - zero
         hmm1.init_probs = np.array([0.5, 0.5])
         hmm1.trans_mat = np.array([[zero, one],
                                    [one, zero]])
@@ -201,13 +204,23 @@ class TestDiscreteBayesHMM(unittest.TestCase):
     #     assert (mean_preds < 0.3).all(), \
     #       "Expected all predictions to be output 1 with prob. < 0.3"
 
-    def _test_hmm_prediction_periodic(self):
-        print "\ntesting periodic predictions: "
+    def test_hmm_prediction_periodic(self):
+        print "\n"
+        print "testing periodic predictions: "
         # now test it with a periodic data set
         data = np.array([0, 1]*20)
         print "data: ", data
-        gibbs_obj = sampler.DiscreteBayesHMMGibbs(self.simple_hmm)
-        gibbs_obj.sample(data)
+        hmm_obj = copy.deepcopy(self.simple_hmm)
+        # initialize it with the right configuration
+        #hmm_obj.hidden_state_trajectory = copy.copy(data)
+        hmm_obj.hidden_state_trajectory = np.array([0, 0] * 20)
+        hmm_obj.init_state_probs = np.array([0.5, 0.5])
+        hmm_obj.trans_mat = np.array([[0.1, 0.9],
+                                      [0.9, 0.1]])
+        hmm_obj.out_mat = np.array([[0.9, 0.1],
+                                    [0.1, 0.9]])
+        gibbs_obj = sampler.DiscreteBayesHMMGibbs(hmm_obj)
+        gibbs_obj.sample(data, init_hidden_states=False)
         mean_preds = self.get_mean_preds(gibbs_obj.samples)
         print "predicting using sampled HMM"
         print "mean preds: ", mean_preds

@@ -15,6 +15,7 @@ import scipy
 import scipy.stats
 
 DEBUG = False
+DEBUG_DELAY = 0.5
 
 ##
 ## TODO:
@@ -58,8 +59,8 @@ class DiscreteBayesHMM:
         self.out_mat_hyperparams = out_mat_hyperparams
         # default prior hyperparameters for transition and output
         # matrix
-        self.default_trans_mat_hyperparam = 0.8
-        self.default_out_mat_hyperparam = 1
+        self.default_trans_mat_hyperparam = 1.
+        self.default_out_mat_hyperparam = 0.5
         # initialize priors if none given
         self.trans_mat_hyperparams = trans_mat_hyperparams
         if self.trans_mat_hyperparams is None:
@@ -108,9 +109,9 @@ class DiscreteBayesHMM:
             prev_state_probs = curr_state_probs
         return predictions
 
-    def initialize(self, data=None):
+    def initialize(self):
         """
-        initialize to random model.
+        Initialize to random model.
         """
         # choose initial state probabilities
         self.init_state_probs = np.random.dirichlet(self.init_state_hyperparams)
@@ -118,9 +119,14 @@ class DiscreteBayesHMM:
         self.trans_mat = init_trans_mat(self.trans_mat_hyperparams)
         # choose observation matrix
         self.out_mat = init_out_mat(self.out_mat_hyperparams)
-        # if given data, initialize hidden state trajectory
-        if data is not None:
-            self.data_len = data.shape[0]
+
+    def add_data(self, data, init_hidden_states=True):
+        """
+        Add data to model.
+        """
+        self.data_len = data.shape[0]
+        self.outputs = data
+        if init_hidden_states:
             self.hidden_state_trajectory = np.zeros(self.data_len,
                                                     dtype=np.int32)
             # choose initial state
@@ -131,7 +137,7 @@ class DiscreteBayesHMM:
                 prev_hidden_state = self.hidden_state_trajectory[n - 1]
                 self.hidden_state_trajectory[n] = \
                   np.random.multinomial(1, self.trans_mat[prev_hidden_state, :]).argmax()
-            self.outputs = data
+        
 ##
 ## initialization functions
 ##
@@ -188,7 +194,7 @@ def sample_new_hmm(old_hmm, data):
         print new_hmm.trans_mat
         print "new out mat: "
         print new_hmm.out_mat
-        time.sleep(0.2)
+        time.sleep(DEBUG_DELAY)
     # sample transition matrix
     new_hmm.trans_mat = sample_trans_mat(new_hmm.hidden_state_trajectory,
                                          new_hmm.trans_mat_hyperparams)
@@ -270,11 +276,15 @@ def sample_hidden_states(hidden_state_trajectory,
     next_state = None
     if hidden_state_trajectory.shape[0] > 1:
         next_state = hidden_state_trajectory[1]
+    if DEBUG:
+        print "prev init hidden state: ", hidden_state_trajectory[0]
     hidden_state_trajectory[0] = sample_init_state(init_state_probs,
                                                    hidden_state_trajectory,
                                                    outputs,
                                                    trans_mat,
                                                    out_mat)
+    if DEBUG:
+        print "new init hidden state: ", hidden_state_trajectory[0]
     possible_hidden_states = np.arange(len(init_state_probs))
     for n in xrange(1, seq_len):
         # Sample P(S_t | S_t-1, S_t+1, T, Y)
@@ -283,14 +293,14 @@ def sample_hidden_states(hidden_state_trajectory,
         log_scores = \
           np.log(trans_mat[prev_hidden_state, possible_hidden_states]) + \
           np.log(out_mat[possible_hidden_states, outputs[n]])
-        if hidden_state_trajectory.shape[0] > 1:
+        if (n + 1) < seq_len:
             # P(S_1 | S_0): probability of transitioning to next state, if
             # available
             log_scores += np.log(trans_mat[possible_hidden_states,
-                                           hidden_state_trajectory[1]])
+                                           hidden_state_trajectory[n + 1]])
         # sample value
         probs = np.exp(log_scores - scipy.misc.logsumexp(log_scores))
-        if DEBUG: print "probs: ", probs
+        if DEBUG: print "probs of new hidden state: ", probs
         hidden_state_trajectory[n] = np.random.multinomial(1, probs).argmax()
     return hidden_state_trajectory
 
@@ -334,6 +344,11 @@ def sample_out_mat(outputs,
     # number of occurences of each output state
     out_counts = count_out_mat(outputs, hidden_state_trajectory,
                                num_hidden_states, num_outputs)
+    if DEBUG:
+        print "OUT MAT COUNTS: "
+        print "H: ", hidden_state_trajectory
+        print "O: ", outputs
+        print out_counts
     for n in xrange(num_hidden_states):
         sampled_out_mat[n, :] = \
           np.random.dirichlet(out_counts[n, :] + out_mat_hyperparams[n, :])
@@ -370,11 +385,17 @@ def log_score_joint(hmm_obj):
     # score output matrix
     log_out_mat = \
       log_score_out_mat(out_mat, out_mat_hyperparams)
+    print "log total: "
+    print "*" * 5
+    print "log hidden traj: ", log_hidden_trajectory
+    print "log outputs: ", log_outputs
+    print "log_trans mat: ", log_trans_mat
+    print "log_out mat: ", log_out_mat
     log_total = \
       log_hidden_trajectory + \
       log_outputs + \
       log_trans_mat + \
-      log_out_mat
+      log_out_mat 
     return log_total
 
 def log_score_outputs(hidden_state_trajectory,
@@ -383,20 +404,18 @@ def log_score_outputs(hidden_state_trajectory,
     return np.sum(np.log(out_mat[hidden_state_trajectory, outputs]))
 
 def log_score_out_mat(out_mat, out_mat_hyperparams):
-    log_score = 0
+    log_score = 0.
     for n in xrange(out_mat.shape[0]):
         log_score += scipy.stats.dirichlet.logpdf(out_mat[n, :],
                                                   out_mat_hyperparams[n, :])
+    print "log score out mat ===> ", log_score
     return log_score
 
 def log_score_trans_mat(trans_mat, trans_mat_hyperparams):
-    log_score = 0
+    log_score = 0.
     for n in xrange(trans_mat.shape[0]):
-        print trans_mat[n, :], " a"
-        print trans_mat_hyperparams[n, :], " b"
         log_score += scipy.stats.dirichlet.logpdf(trans_mat[n, :],
                                                   trans_mat_hyperparams[n, :])
-        print "log score: ", log_score
     print "log trans mat --> ", log_score
     return log_score
 
@@ -421,25 +440,23 @@ def log_score_hidden_state_trajectory(hidden_trajectory,
     # initial observation
     init_out = outputs[0]
     if num_obs == 1:
-        # prob. of being in this initial state plus
-        # times prob. of observing given output
+        # prob. of being in this initial state
         log_scores[0] = \
-          np.log(init_probs[init_hidden_state]) + \
-          np.log(out_mat[init_hidden_state, init_out])
+          np.log(init_probs[init_hidden_state])
         return np.sum(log_scores)
+    print "scoring hidden trajectory: ", hidden_trajectory
     # score initial state: it depends on its output and
     # the next hidden state.
     # prob. of being in initial hidden state times 
     # prob. of observing output given initial state
     log_scores[0] = \
-      np.log(init_probs[init_hidden_state]) + \
-      np.log(out_mat[init_hidden_state, init_out])
+      np.log(init_probs[init_hidden_state])
     ### vectorized version
     log_scores[1:] = \
       np.log(trans_mat[hidden_trajectory[0:-1],
-                       hidden_trajectory[1:]]) + \
-      np.log(out_mat[hidden_trajectory[1:],
-                     outputs[1:]])
+                       hidden_trajectory[1:]])
+    print "using trans mat: ", trans_mat
+    print " -- total hidden traj score: ", np.sum(log_scores)
     return np.sum(log_scores)
 
 if __name__ == "__main__":

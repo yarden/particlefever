@@ -45,7 +45,7 @@ class DiscreteSwitchSSM:
         # default prior hyperparameters for transition and output
         # matrix
         self.default_trans_mat_hyperparam = 0.8
-        self.default_out_mat_hyperparam = 1
+        self.default_out_mat_hyperparam = 1.
         # initialize priors if none given
         self.trans_mat_hyperparams = trans_mat_hyperparams
         if self.trans_mat_hyperparams is None:
