@@ -7,7 +7,9 @@ import time
 import unittest
 import numpy as np
 import scipy
-import scipy.stats 
+import scipy.stats
+
+import copy
 
 import particlefever
 import particlefever.math_utils as math_utils
@@ -34,6 +36,11 @@ class TestGeneralScoring(unittest.TestCase):
         assert (np.isclose(val_multi, val_binom)), \
           "multinomial and binomial logpmfs give different answers."
 
+          
+class TestDiscreteSwitchSSM(unittest.TestCase):
+    def setUp(self):
+        self.simple_ssm = DiscreteSwitchSSM(2, 2, 2)
+          
 
 class TestDiscreteBayesHMM(unittest.TestCase):
     """
@@ -44,7 +51,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         trans_mat_hyperparams *= 1.
         # put peaky prior on outputs
         out_mat_hyperparams = np.ones((2, 2))
-        out_mat_hyperparams *= 0.1
+        out_mat_hyperparams *= 3.739
         self.simple_hmm = \
           bayes_hmm.DiscreteBayesHMM(2, 2,
                                      trans_mat_hyperparams=trans_mat_hyperparams,
@@ -94,6 +101,63 @@ class TestDiscreteBayesHMM(unittest.TestCase):
                                            out_mat_hyperparams,
                                            num_hidden_states)
 
+    def test_log_joint_scores(self):
+        """
+        Test scoring of joint distribution.
+        """
+        num_pairs = 10
+        outputs = np.array([0, 1] * num_pairs)
+        trans_mat_hyperparams = np.ones((2, 2))
+        trans_mat_hyperparams *= 1.
+        out_mat_hyperparams = np.ones((2, 2))
+        out_mat_hyperparams *= 3.739
+        
+        hmm1 = copy.deepcopy(self.simple_hmm)
+        hmm1.trans_mat_hyperparams = trans_mat_hyperparams
+        hmm1.out_mat_hyperparams = out_mat_hyperparams
+        
+        hmm1.hidden_state_trajectory = np.array([0, 1] * num_pairs)
+        # deterministic constant switching
+        # with peaked output for each state
+
+        ###
+        ### Understand why this changes when we change -5
+        ### to be -6 or -4? Why isn't event going in consistent
+        ### direction?
+        ###
+        zero = np.power(10., -5)
+        one = 1 - zero
+        hmm1.init_probs = np.array([0.5, 0.5])
+        hmm1.trans_mat = np.array([[zero, one],
+                                   [one, zero]])
+        hmm1.out_mat = np.array([[one, zero],
+                                 [zero, one]])
+        hmm1.outputs = outputs
+        # no hidden state switching, with 0.5
+        # probability of output
+        hmm2 = copy.deepcopy(hmm1)
+        hmm2.hidden_state_trajectory = np.array([0, 0] * num_pairs)
+        hmm2.init_probs = hmm1.init_probs
+        hmm2.trans_mat = np.array([[one, zero],
+                                   [zero, one]])
+        hmm2.out_mat = np.array([[0.5, 0.5],
+                                 [one, zero]])
+        hmm2.outputs = outputs
+        # score the two models
+        log_score1 = bayes_hmm.log_score_joint(hmm1)
+        log_score2 = bayes_hmm.log_score_joint(hmm2)
+        print "testing log joint scores: "
+        print "Periodic HMM: "
+        print hmm1
+        print "log score: %.4f" %(log_score1)
+        print "--" * 5
+        print "Equiprobable HMM: "
+        print hmm2
+        print "log score: %.4f" %(log_score2)
+        print "Ratio of log score 1 to log score 2: "
+        print " - diff: %.4f" %(log_score1 - log_score2)
+        print " - ratio: %.6f" %(np.exp(log_score1) / np.exp(log_score2))
+
     def _test_gibbs_inference(self):
         """
         Test Gibbs sampling in HMM.
@@ -108,7 +172,6 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         for curr_hmm in samples:
             curr_hmm = samples[-1]
             preds = curr_hmm.predict(num_preds)
-            print "preds: ", preds
             all_preds.append(preds)
         all_preds = np.array(all_preds)
         mean_preds = all_preds.mean(axis=0)
@@ -138,7 +201,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
     #     assert (mean_preds < 0.3).all(), \
     #       "Expected all predictions to be output 1 with prob. < 0.3"
 
-    def test_hmm_prediction_periodic(self):
+    def _test_hmm_prediction_periodic(self):
         print "\ntesting periodic predictions: "
         # now test it with a periodic data set
         data = np.array([0, 1]*20)

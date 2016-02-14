@@ -34,7 +34,7 @@ class DiscreteBayesHMMGibbs(Sampler):
     def __repr__(self):
         return self.__str__()
 
-    def sample(self, data, num_iters=10000, burn_in=100, lag=2):
+    def sample(self, data, num_iters=10000, burn_in=100, lag=5):
         """
         Run posterior sampling.
         """
@@ -47,10 +47,13 @@ class DiscreteBayesHMMGibbs(Sampler):
         t1 = time.time()
         for n_iter in xrange(num_iters):
             new_hmm = bayes_hmm.sample_new_hmm(old_hmm, data)
-            self.samples.append(new_hmm)
+            if (n_iter % lag == 0) and (n_iter >= burn_in):
+                self.samples.append(new_hmm)
             old_hmm = new_hmm
         t2 = time.time()
-        print "sampling took %.2f secs" %(t2 - t1)
+        num_sampled = len(self.samples)
+        print "sampling took %.2f secs (%d final samples)" %(t2 - t1,
+                                                             num_sampled)
 
     def summarize_outputs(self):
         """

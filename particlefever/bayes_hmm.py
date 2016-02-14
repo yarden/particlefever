@@ -38,8 +38,8 @@ class DiscreteBayesHMM:
         self.num_hidden_states = num_hidden_states
         self.num_outputs = num_outputs
         # hidden state assignments
-        self.hidden_trajectory = np.zeros((self.num_hidden_states,
-                                           self.num_hidden_states))
+#        self.hidden_trajectory = np.zeros((self.num_hidden_states,
+#                                           self.num_hidden_states))
         self.hidden_state_trajectory = None
         self.out_state_trajectory = None
         self.trans_mat = np.zeros((self.num_hidden_states,
@@ -77,8 +77,8 @@ class DiscreteBayesHMM:
                "trans_mat=%s,\nout_mat=%s)" \
                %(self.num_hidden_states,
                  self.num_outputs,
-                 self.trans_mat,
-                 self.out_mat)
+                 np.array_str(self.trans_mat, precision=3),
+                 np.array_str(self.out_mat, precision=3))
 
     def __repr__(self):
         return self.__str__()
@@ -204,8 +204,7 @@ def sample_new_hmm(old_hmm, data):
                                            new_hmm.hidden_state_trajectory,
                                            new_hmm.outputs,
                                            new_hmm.trans_mat,
-                                           new_hmm.out_mat,
-                                           next_state=next_state)
+                                           new_hmm.out_mat)
     return new_hmm
 
 def sample_init_state_prior(init_state, init_state_hyperparams):
@@ -224,8 +223,7 @@ def sample_init_state(init_state_probs,
                       hidden_state_trajectory,
                       outputs,
                       trans_mat,
-                      out_mat,
-                      next_state=None):
+                      out_mat):
     """
     Sample assignment of initial state prior given initial state
     hyperparameters.
@@ -267,9 +265,6 @@ def sample_hidden_states(hidden_state_trajectory,
     Sample new configuration of hidden states.
     """
     num_hidden_states = trans_mat.shape[0]
-    new_hidden_state_trajectory = np.zeros((num_hidden_states,
-                                            num_hidden_states),
-                                           dtype=np.int32)
     seq_len = len(hidden_state_trajectory)
     # sample initial state
     next_state = None
@@ -279,8 +274,7 @@ def sample_hidden_states(hidden_state_trajectory,
                                                    hidden_state_trajectory,
                                                    outputs,
                                                    trans_mat,
-                                                   out_mat,
-                                                   next_state=next_state)
+                                                   out_mat)
     possible_hidden_states = np.arange(len(init_state_probs))
     for n in xrange(1, seq_len):
         # Sample P(S_t | S_t-1, S_t+1, T, Y)
@@ -338,10 +332,6 @@ def sample_out_mat(outputs,
     num_outputs = out_mat_hyperparams.shape[1]
     sampled_out_mat = np.zeros((num_hidden_states, num_outputs))
     # number of occurences of each output state
-    ###
-    ### TODO: this is wrong -- the out counts should be
-    ##        a num states by num outputs matrix
-    ###
     out_counts = count_out_mat(outputs, hidden_state_trajectory,
                                num_hidden_states, num_outputs)
     for n in xrange(num_hidden_states):
@@ -352,15 +342,66 @@ def sample_out_mat(outputs,
 ##
 ## scoring functions
 ##
-def log_score_joint():
+def log_score_joint(hmm_obj):
     """
     Score full joint model.
     """
-    pass
+    init_state = hmm_obj.hidden_state_trajectory[0]
+    init_probs = hmm_obj.init_probs
+    hidden_state_trajectory = hmm_obj.hidden_state_trajectory
+    outputs = hmm_obj.outputs
+    trans_mat = hmm_obj.trans_mat 
+    out_mat = hmm_obj.out_mat
+    out_mat_hyperparams = hmm_obj.out_mat_hyperparams
+    trans_mat_hyperparams = hmm_obj.trans_mat_hyperparams
+    # score hidden states
+    log_hidden_trajectory = \
+      log_score_hidden_state_trajectory(hidden_state_trajectory,
+                                        outputs,
+                                        trans_mat,
+                                        out_mat,
+                                        init_probs)
+    # score transition matrix
+    log_trans_mat = \
+      log_score_trans_mat(trans_mat, trans_mat_hyperparams)
+    # score outputs
+    log_outputs = \
+      np.sum(np.log(out_mat[hidden_state_trajectory, outputs]))
+    # score output matrix
+    log_out_mat = \
+      log_score_out_mat(out_mat, out_mat_hyperparams)
+    log_total = \
+      log_hidden_trajectory + \
+      log_outputs + \
+      log_trans_mat + \
+      log_out_mat
+    return log_total
 
+def log_score_outputs(hidden_state_trajectory,
+                      outputs,
+                      out_mat):
+    return np.sum(np.log(out_mat[hidden_state_trajectory, outputs]))
+
+def log_score_out_mat(out_mat, out_mat_hyperparams):
+    log_score = 0
+    for n in xrange(out_mat.shape[0]):
+        log_score += scipy.stats.dirichlet.logpdf(out_mat[n, :],
+                                                  out_mat_hyperparams[n, :])
+    return log_score
+
+def log_score_trans_mat(trans_mat, trans_mat_hyperparams):
+    log_score = 0
+    for n in xrange(trans_mat.shape[0]):
+        print trans_mat[n, :], " a"
+        print trans_mat_hyperparams[n, :], " b"
+        log_score += scipy.stats.dirichlet.logpdf(trans_mat[n, :],
+                                                  trans_mat_hyperparams[n, :])
+        print "log score: ", log_score
+    print "log trans mat --> ", log_score
+    return log_score
 
 def log_score_hidden_state_trajectory(hidden_trajectory,
-                                      observations,
+                                      outputs,
                                       trans_mat,
                                       out_mat,
                                       init_probs):
@@ -369,23 +410,23 @@ def log_score_hidden_state_trajectory(hidden_trajectory,
     transition matrix, output matrix, and initial state probabilities.
     Return a vector of log scores:
 
-    log[P(hidden_trajectory | observations, trans_mat, obs_mat, init_probs])
+    log[P(hidden_trajectory | outputs, trans_mat, obs_mat, init_probs])
     """
-    num_obs = observations.shape[0]
+    num_obs = outputs.shape[0]
     log_scores = np.zeros(num_obs, dtype=np.float64)
     # handle special case of single observation
     # the score is the probability of being
     # in this initial state and emitting the single observation
     init_hidden_state = hidden_trajectory[0]
     # initial observation
-    init_out = observations[0]
+    init_out = outputs[0]
     if num_obs == 1:
         # prob. of being in this initial state plus
         # times prob. of observing given output
         log_scores[0] = \
           np.log(init_probs[init_hidden_state]) + \
           np.log(out_mat[init_hidden_state, init_out])
-        return log_scores
+        return np.sum(log_scores)
     # score initial state: it depends on its output and
     # the next hidden state.
     # prob. of being in initial hidden state times 
@@ -398,8 +439,8 @@ def log_score_hidden_state_trajectory(hidden_trajectory,
       np.log(trans_mat[hidden_trajectory[0:-1],
                        hidden_trajectory[1:]]) + \
       np.log(out_mat[hidden_trajectory[1:],
-                     observations[1:]])
-    return log_scores
+                     outputs[1:]])
+    return np.sum(log_scores)
 
 if __name__ == "__main__":
     trans_mat = np.matrix([[0.9, 0.1],
