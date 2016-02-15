@@ -36,6 +36,7 @@ class DiscreteBayesHMM:
                  trans_mat_hyperparams=None,
                  out_mat_hyperparams=None):
         self.model_type = "discrete_bayes_hmm"
+        self.initialized = False
         # HMM state
         self.num_hidden_states = num_hidden_states
         self.num_outputs = num_outputs
@@ -117,6 +118,7 @@ class DiscreteBayesHMM:
         self.trans_mat = init_trans_mat(self.trans_mat_hyperparams)
         # choose observation matrix
         self.out_mat = init_out_mat(self.out_mat_hyperparams)
+        self.initialized = True
 
     def add_data(self, data, init_hidden_states=True):
         """

@@ -43,13 +43,19 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         self.simple_ssm = switch_ssm.DiscreteSwitchSSM(2, 2)
         
     def test_sample_mats(self):
-        data = np.array([0, 1] * 5 + [1, 1] * 5)
+        data = np.array([0, 1] * 50)# + [1, 1] * 5)
         self.simple_ssm.initialize()
         self.simple_ssm.add_data(data)
-        print "SSM: "
-        print self.simple_ssm
         switch_ssm.sample_new_ssm(self.simple_ssm, data)
-          
+
+    def test_gibbs(self):
+        data = np.array([0, 1] * 50)# + [1, 1] * 5)
+        ssm = copy.deepcopy(self.simple_ssm)
+        gibbs_obj = sampler.DiscreteSwitchSSM(ssm)
+        gibbs_obj.sample(data)
+        
+        
+        
 
 class TestDiscreteBayesHMM(unittest.TestCase):
     """

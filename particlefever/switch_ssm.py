@@ -28,6 +28,7 @@ class DiscreteSwitchSSM:
                  switch_trans_mat_hyperparams=None,
                  out_trans_mat_hyperparams=None):
         self.model_type = "discrete_switch_ssm"
+        self.initialized = False
         self.num_switch_states = num_switch_states
         self.num_outputs = num_outputs
         # switch state assignments
@@ -115,6 +116,7 @@ class DiscreteSwitchSSM:
         for s in xrange(self.num_switch_states):
             self.out_trans_mats[s, :] = \
               init_out_mat(self.out_trans_mat_hyperparams)
+        self.initialized = True
 
     def add_data(self, data, init_switch_states=True):
         """
@@ -162,10 +164,11 @@ def init_out_mat(out_mat_hyperparams):
 def sample_new_ssm(old_ssm, data):
     new_ssm = copy.deepcopy(old_ssm)
     # sample output matrix
-    new_ssm.out_mat = sample_out_trans_mats(new_ssm.outputs,
-                                            new_ssm.switch_state_trajectory,
-                                            new_ssm.out_trans_mat_hyperparams,
-                                            new_ssm.num_switch_states)
+    new_ssm.out_trans_mats = \
+      sample_out_trans_mats(new_ssm.outputs,
+                            new_ssm.switch_state_trajectory,
+                            new_ssm.out_trans_mat_hyperparams,
+                            new_ssm.num_switch_states)
     # sample switch states
     if DEBUG:
         print "old ssm: "
@@ -187,29 +190,20 @@ def sample_new_ssm(old_ssm, data):
         print "NEW ssm: "
         print "*"*5
         print "new hidden state: "
-        print new_ssm.hidden_state_trajectory
+        print new_ssm.switch_state_trajectory
         print "new trans mat: "
-        print new_ssm.trans_mat
-        print "new out mat: "
-        print new_ssm.out_mat
+        print new_ssm.switch_trans_mat
+        print "new out trans mat: "
+        print new_ssm.out_trans_mats
         time.sleep(0.2)
-    # sample transition matrix
-    new_ssm.trans_mat = sample_trans_mat(new_ssm.hidden_state_trajectory,
-                                         new_ssm.trans_mat_hyperparams)
+    # sample switch transition matrix
+    new_ssm.switch_trans_mat = \
+      sample_switch_trans_mat(new_ssm.switch_state_trajectory,
+                              new_ssm.switch_trans_mat_hyperparams)
     # sample initial state probs
     new_ssm.init_switch_probs = \
-      sample_init_state_prior(new_ssm.hidden_state_trajectory[0],
+      sample_init_state_prior(new_ssm.switch_state_trajectory[0],
                               new_ssm.init_switch_hyperparams)
-    # sample initial state
-    next_state = None
-    if new_ssm.hidden_state_trajectory.shape[0] > 1:
-        next_state = new_ssm.hidden_state_trajectory[1]
-    new_ssm.init_state = sample_init_state(new_ssm.init_switch_probs,
-                                           new_ssm.hidden_state_trajectory,
-                                           new_ssm.outputs,
-                                           new_ssm.trans_mat,
-                                           new_ssm.out_mat,
-                                           next_state=next_state)
     return new_ssm
 
 
@@ -272,7 +266,7 @@ def sample_init_switch_state(init_switch_probs,
                              switch_state_trajectory,
                              outputs,
                              switch_trans_mat,
-                             out_trans_mat):
+                             out_trans_mats):
     """
     Sample assignment of initial switch state.
 
@@ -299,9 +293,8 @@ def sample_init_switch_state(init_switch_probs,
       log[P(Y_2 | Y_1, S_1, T_out)] 
     """
     possible_switch_states = np.arange(init_switch_probs.shape[0])
-    log_scores = \
-      np.log(init_state_probs)
-    if hidden_state_trajectory.shape[0] > 1:
+    log_scores = np.log(init_switch_probs)
+    if switch_state_trajectory.shape[0] > 1:
         # probability of transitioning from first to second switch
         # state (only if there is a second switch state)
         log_scores += np.log(switch_trans_mat[possible_switch_states,
@@ -309,7 +302,7 @@ def sample_init_switch_state(init_switch_probs,
         # probability of emitting transitioning from first
         # to second output under possible values of the initial
         # hidden switch state
-        log_scores += np.log(out_trans_mats[possible_hidden_states,
+        log_scores += np.log(out_trans_mats[possible_switch_states,
                                             outputs[0],
                                             outputs[1]])
     # sample value
@@ -391,7 +384,7 @@ def sample_switch_trans_mat(switch_state_trajectory,
         print counts_mat
     # sample new transition matrix by iterating through
     # rows
-    sampled_trans_mat = np.zeros(trans_mat_shape)
+    sampled_trans_mat = np.zeros(switch_trans_mat_shape)
     for n in xrange(sampled_trans_mat.shape[0]):
         # add counts from likelihood (counts matrix) and
         # from prior hyperparameters
@@ -449,7 +442,7 @@ def log_score_joint():
     pass
 
 
-def log_score_hidden_state_trajectory(hidden_trajectory,
+def log_score_switch_state_trajectory(switch_state_trajectory,
                                       observations,
                                       trans_mat,
                                       out_mat,
