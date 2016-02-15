@@ -200,15 +200,6 @@ def sample_new_hmm(old_hmm, data):
     new_hmm.init_state_probs = \
       sample_init_state_prior(new_hmm.hidden_state_trajectory[0],
                               new_hmm.init_state_hyperparams)
-    # sample initial state
-    next_state = None
-    if new_hmm.hidden_state_trajectory.shape[0] > 1:
-        next_state = new_hmm.hidden_state_trajectory[1]
-    new_hmm.init_state = sample_init_state(new_hmm.init_state_probs,
-                                           new_hmm.hidden_state_trajectory,
-                                           new_hmm.outputs,
-                                           new_hmm.trans_mat,
-                                           new_hmm.out_mat)
     return new_hmm
 
 def sample_init_state_prior(init_state, init_state_hyperparams):

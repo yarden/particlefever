@@ -23,7 +23,7 @@ class DiscreteSwitchSSM:
     Discrete switching state-space model.
     """
     def __init__(self, num_switch_states, num_outputs,
-                 init_state_hyperparams=None,
+                 init_switch_hyperparams=None,
                  init_out_hyperparams=None,
                  switch_trans_mat_hyperparams=None,
                  out_trans_mat_hyperparams=None):
@@ -44,12 +44,12 @@ class DiscreteSwitchSSM:
         if self.init_out_hyperparams is None:
             self.init_out_hyperparams = np.ones(self.num_outputs)
             self.init_out_hyperparams *= self.default_init_out_hyperparams
-        # hyperparameters for prior on initial state
-        self.default_init_state_hyperparam = 1.
-        self.init_state_hyperparams = init_state_hyperparams
-        if self.init_state_hyperparams is None:
-            self.init_state_hyperparams = np.ones(self.num_switch_states)
-            self.init_state_hyperparams *= self.default_init_state_hyperparam
+        # hyperparameters for prior on initial switch state
+        self.default_init_switch_hyperparam = 1.
+        self.init_switch_hyperparams = init_switch_hyperparams
+        if self.init_switch_hyperparams is None:
+            self.init_switch_hyperparams = np.ones(self.num_switch_states)
+            self.init_switch_hyperparams *= self.default_init_switch_hyperparam
         # hyperparameters for prior on switch state transition matrix
         self.switch_trans_mat_hyperparams = switch_trans_mat_hyperparams
         # hypeperameters for prior on output transition matrix
@@ -108,7 +108,7 @@ class DiscreteSwitchSSM:
         initialize to random model.
         """
         # choose initial state probabilities
-        self.init_state_probs = np.random.dirichlet(self.init_state_hyperparams)
+        self.init_switch_probs = np.random.dirichlet(self.init_switch_hyperparams)
         # choose switching transition matrix
         self.switch_trans_mat = init_trans_mat(self.switch_trans_mat_hyperparams)
         # choose observation matrix
@@ -128,7 +128,7 @@ class DiscreteSwitchSSM:
                                                     dtype=np.int32)
             # choose initial state
             self.switch_state_trajectory[0] = \
-              np.random.multinomial(1, self.init_state_probs).argmax()
+              np.random.multinomial(1, self.init_switch_probs).argmax()
             # choose switch state trajectories
             for n in xrange(1, self.data_len):
                 prev_switch_state = self.switch_state_trajectory[n - 1]
@@ -173,16 +173,16 @@ def sample_new_ssm(old_ssm, data):
         print "old hidden state: "
         print new_ssm.switch_state_trajectory
         print "old trans mat: "
-        print new_ssm.trans_mat
-        print "old out mat: "
-        print new_ssm.out_mat
-    new_ssm.hidden_state_trajectory = \
-      sample_hidden_states(new_ssm.hidden_state_trajectories,
-                           new_ssm.trans_mat,
-                           new_ssm.out_mat,
+        print new_ssm.switch_trans_mat
+        print "old out trans mat: "
+        print new_ssm.out_trans_mats
+    new_ssm.switch_state_trajectory = \
+      sample_switch_states(new_ssm.switch_state_trajectory,
+                           new_ssm.switch_trans_mat,
+                           new_ssm.out_trans_mats,
                            new_ssm.outputs,
-                           new_ssm.init_state_probs,
-                           new_ssm.init_state_hyperparams)
+                           new_ssm.init_switch_probs,
+                           new_ssm.init_switch_hyperparams)
     if DEBUG:
         print "NEW ssm: "
         print "*"*5
@@ -197,14 +197,14 @@ def sample_new_ssm(old_ssm, data):
     new_ssm.trans_mat = sample_trans_mat(new_ssm.hidden_state_trajectory,
                                          new_ssm.trans_mat_hyperparams)
     # sample initial state probs
-    new_ssm.init_state_probs = \
+    new_ssm.init_switch_probs = \
       sample_init_state_prior(new_ssm.hidden_state_trajectory[0],
-                              new_ssm.init_state_hyperparams)
+                              new_ssm.init_switch_hyperparams)
     # sample initial state
     next_state = None
     if new_ssm.hidden_state_trajectory.shape[0] > 1:
         next_state = new_ssm.hidden_state_trajectory[1]
-    new_ssm.init_state = sample_init_state(new_ssm.init_state_probs,
+    new_ssm.init_state = sample_init_state(new_ssm.init_switch_probs,
                                            new_ssm.hidden_state_trajectory,
                                            new_ssm.outputs,
                                            new_ssm.trans_mat,
@@ -343,6 +343,7 @@ def sample_switch_states(switch_state_trajectory,
       sample_init_switch_state(init_switch_probs,
                                switch_state_trajectory,
                                outputs,
+                               switch_trans_mat,
                                out_trans_mats)
     possible_switch_states = np.arange(num_switch_states)
     for n in xrange(1, seq_len):
