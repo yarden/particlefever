@@ -15,6 +15,7 @@ import particlefever
 import particlefever.math_utils as math_utils
 import particlefever.bayes_hmm as bayes_hmm
 import particlefever.sampler as sampler
+import particlefever.switch_ssm as switch_ssm
 
 class TestGeneralScoring(unittest.TestCase):
     """
@@ -39,7 +40,15 @@ class TestGeneralScoring(unittest.TestCase):
           
 class TestDiscreteSwitchSSM(unittest.TestCase):
     def setUp(self):
-        self.simple_ssm = DiscreteSwitchSSM(2, 2, 2)
+        self.simple_ssm = switch_ssm.DiscreteSwitchSSM(2, 2)
+        
+    def test_sample_mats(self):
+        data = np.array([0, 1] * 5 + [1, 1] * 5)
+        self.simple_ssm.initialize()
+        self.simple_ssm.add_data(data)
+        print "SSM: "
+        print self.simple_ssm
+        switch_ssm.sample_new_ssm(self.simple_ssm, data)
           
 
 class TestDiscreteBayesHMM(unittest.TestCase):

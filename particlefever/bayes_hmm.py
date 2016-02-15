@@ -49,7 +49,7 @@ class DiscreteBayesHMM:
         self.default_init_state_hyperparam = 1
         self.init_state_hyperparams = init_state_hyperparams
         if self.init_state_hyperparams is None:
-            self.init_state_hyperparams = np.ones(self.num_outputs)
+            self.init_state_hyperparams = np.ones(self.num_hidden_states)
             self.init_state_hyperparams *= self.default_init_state_hyperparam
         # hyperparameters for prior on transition matrix
         self.trans_mat_hyperparams = trans_mat_hyperparams
@@ -296,8 +296,6 @@ def sample_hidden_states(hidden_state_trajectory,
             # available
             log_scores += np.log(trans_mat[possible_hidden_states,
                                            hidden_state_trajectory[n + 1]])
-        # sample value
-        #probs = np.exp(log_scores - scipy.misc.logsumexp(log_scores))
         probs = np.exp(log_scores - stat_utils.logsumexp(log_scores))
         if DEBUG: print "probs of new hidden state: ", probs
         hidden_state_trajectory[n] = np.random.multinomial(1, probs).argmax()
