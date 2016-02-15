@@ -11,6 +11,7 @@ import numpy as np
 import particlefever
 import particlefever.math_utils as math_utils
 import particlefever.bayes_hmm as bayes_hmm
+import particlefever.switch_ssm as switch_ssm
 
 # Node types
 DISCRETE = "discrete"
@@ -66,7 +67,6 @@ class DiscreteSwitchSSM(GibbsSampler):
 
     def __str__(self):
         return "DiscreteSwitchSSMGibbs(model=%s)" %(self.model)
-                             
                          
 class DiscreteBayesHMMGibbs(GibbsSampler):
     """
