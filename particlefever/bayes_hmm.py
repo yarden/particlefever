@@ -10,6 +10,7 @@ import numpy as np
 import particlefever
 import particlefever.math_utils as math_utils
 import particlefever.markov_utils as markov_utils
+import particlefever.stat_utils as stat_utils
 
 import scipy
 import scipy.stats
@@ -38,9 +39,6 @@ class DiscreteBayesHMM:
         # HMM state
         self.num_hidden_states = num_hidden_states
         self.num_outputs = num_outputs
-        # hidden state assignments
-#        self.hidden_trajectory = np.zeros((self.num_hidden_states,
-#                                           self.num_hidden_states))
         self.hidden_state_trajectory = None
         self.out_state_trajectory = None
         self.trans_mat = np.zeros((self.num_hidden_states,
@@ -107,7 +105,7 @@ class DiscreteBayesHMM:
             predicted_probs[step, :] = curr_output_probs
             predictions[step] = np.random.multinomial(1, curr_output_probs).argmax()
             prev_state_probs = curr_state_probs
-        return predictions
+        return predictions, predicted_probs
 
     def initialize(self):
         """
@@ -299,7 +297,8 @@ def sample_hidden_states(hidden_state_trajectory,
             log_scores += np.log(trans_mat[possible_hidden_states,
                                            hidden_state_trajectory[n + 1]])
         # sample value
-        probs = np.exp(log_scores - scipy.misc.logsumexp(log_scores))
+        #probs = np.exp(log_scores - scipy.misc.logsumexp(log_scores))
+        probs = np.exp(log_scores - stat_utils.logsumexp(log_scores))
         if DEBUG: print "probs of new hidden state: ", probs
         hidden_state_trajectory[n] = np.random.multinomial(1, probs).argmax()
     return hidden_state_trajectory

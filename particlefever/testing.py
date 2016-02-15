@@ -53,7 +53,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         # put peaky prior on outputs
         out_mat_hyperparams = np.ones((2, 2))
         #out_mat_hyperparams *= 3.739
-        out_mat_hyperparams *= 0.3
+        out_mat_hyperparams *= 0.5
         self.simple_hmm = \
           bayes_hmm.DiscreteBayesHMM(2, 2,
                                      trans_mat_hyperparams=trans_mat_hyperparams,
@@ -103,7 +103,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
                                            out_mat_hyperparams,
                                            num_hidden_states)
 
-    def _test_log_joint_scores(self):
+    def test_log_joint_scores(self):
         """
         Test scoring of joint distribution.
         """
@@ -112,7 +112,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         trans_mat_hyperparams = np.ones((2, 2))
         trans_mat_hyperparams *= 1.
         out_mat_hyperparams = np.ones((2, 2))
-        out_mat_hyperparams *= 3.739
+        out_mat_hyperparams *= 1.
         
         hmm1 = copy.deepcopy(self.simple_hmm)
         hmm1.trans_mat_hyperparams = trans_mat_hyperparams
@@ -121,14 +121,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         hmm1.hidden_state_trajectory = np.array([0, 1] * num_pairs)
         # deterministic constant switching
         # with peaked output for each state
-
-        ###
-        ### Understand why this changes when we change -5
-        ### to be -6 or -4? Why isn't event going in consistent
-        ### direction?
-        ###
         zero = np.power(10., -5)
-        print "zero: ", zero
         one = 1. - zero
         hmm1.init_probs = np.array([0.5, 0.5])
         hmm1.trans_mat = np.array([[zero, one],
@@ -153,30 +146,24 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         print "Periodic HMM: "
         print hmm1
         print "log score: %.4f" %(log_score1)
-        print "--" * 5
+        print "==" * 5
         print "Equiprobable HMM: "
         print hmm2
         print "log score: %.4f" %(log_score2)
         print "Ratio of log score 1 to log score 2: "
         print " - diff: %.4f" %(log_score1 - log_score2)
         print " - ratio: %.6f" %(np.exp(log_score1) / np.exp(log_score2))
+        assert (log_score1 > log_score2), \
+          "Periodic hypothesis should be favored."
 
-    def _test_gibbs_inference(self):
-        """
-        Test Gibbs sampling in HMM.
-        """
-        print "testing Gibbs sampling"
-        data = np.array([0, 1]*20)
-        gibbs_obj = sampler.DiscreteBayesHMMGibbs(self.simple_hmm)
-        gibbs_obj.sample(data)
-        
-    def get_mean_preds(self, samples, num_preds=20):
-        all_preds = []
-        for curr_hmm in samples:
+    def get_mean_preds(self, samples, num_preds=20, num_outputs=2):
+        num_samples = len(samples)
+        all_preds = np.zeros((num_samples, num_preds, num_outputs))
+        n = 0
+        for n in xrange(num_samples):
             curr_hmm = samples[-1]
-            preds = curr_hmm.predict(num_preds)
-            all_preds.append(preds)
-        all_preds = np.array(all_preds)
+            preds, pred_probs = curr_hmm.predict(num_preds)
+            all_preds[n, :] = pred_probs
         mean_preds = all_preds.mean(axis=0)
         return mean_preds
         

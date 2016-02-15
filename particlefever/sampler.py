@@ -34,7 +34,7 @@ class DiscreteBayesHMMGibbs(Sampler):
     def __repr__(self):
         return self.__str__()
 
-    def sample(self, data, num_iters=10000, burn_in=100, lag=10,
+    def sample(self, data, num_iters=10000, burn_in=100, lag=4,
                init_hidden_states=True):
         """
         Run posterior sampling.

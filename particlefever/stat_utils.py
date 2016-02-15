@@ -7,6 +7,10 @@ import scipy
 import scipy.special
 from scipy.special import gammaln
 
+def logsumexp(arr):
+    max_ = arr.max()
+    return np.log2(np.sum(2**(arr - max_))) + max_
+
 def logC(alpha):
     """
     Following notation from:
