@@ -49,7 +49,7 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         switch_ssm.sample_new_ssm(self.simple_ssm, data)
 
     def test_gibbs(self):
-        data = np.array([0, 1] * 50 + [1, 1] * 5)
+        data = np.array([0, 1] * 50 + [1, 1] * 10)
         ssm = copy.deepcopy(self.simple_ssm)
         gibbs_obj = sampler.DiscreteSwitchSSM(ssm)
         gibbs_obj.sample(data)
