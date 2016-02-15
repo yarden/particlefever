@@ -187,65 +187,10 @@ def sample_new_ssm(old_ssm, data):
                                            next_state=next_state)
     return new_ssm
 
-def sample_init_state_prior(init_state, init_state_hyperparams):
-    """
-    Assume I is the Dirichlet parameter that determines
-    value of the initial state S_1. Sample from its
-    conditional distribution:
 
-    P(I | S_1) \propto P(S_1 | I)P(I)
-    """
-    init_state_hyperparams = init_state_hyperparams.copy()
-    init_state_hyperparams[init_state] += 1
-    return np.random.dirichlet(init_state_hyperparams)
-    
-def sample_init_switch_state(init_switch_probs,
-                             switch_state_trajectory,
-                             outputs,
-                             trans_mats):
-    """
-    Sample assignment of initial switch state.
-
-    Args:
-    -----
-    - init_switch_probs: initial probabilities of switch states
-    - switch_state_trajectory: switch state trajectory
-    - outputs: observed outputs
-    - trans_mats: array of (n_switch_states x n_outputs x n_outputs)
-      that gives the transition matrices between the outputs, for
-      each possible switch state. Typically, a (2 x n_outputs x n_outputs)
-      array.
-    - next_state: next switch state
-
-    logP(S_1 | \pi_S, S_2, Y_1, Y_2, T_1, T_2) =
-      # probability of initial switch state given prior
-      log[P(S_1 | \pi_S)] +
-      # probability of transitioning from previous output
-      # to next output given initial switch state
-      log[P(Y_2 | Y_1, S_1)] + 
-      # probability of transitioning to next switch state
-      # (if available) 
-      log[P(S_2 | S_1)] 
-    """
-    possible_switch_states = np.arange(init_switch_probs.shape[0])
-    log_scores = \
-      np.log(init_state_probs)
-    if hidden_state_trajectory.shape[0] > 1:
-        # probability of transitioning from first to second switch
-        # state (only if there is a second switch state)
-        log_scores += np.log(trans_mats[possible_switch_states,
-                                        switch_state_trajectory[0],
-                                        switch_state_trajectory[1]])
-        # probability of transitioning from first to second
-        # output (only if there is a second output)
-        log_scores += np.log(trans_mats[possible_hidden_states,
-                                        outputs[0],
-                                        outputs[1]])
-    # sample value
-    probs = np.exp(log_scores - scipy.misc.logsumexp(log_scores))
-    sampled_init_switch_state = np.random.multinomial(1, probs).argmax()
-    return sampled_init_switch_state
-
+##
+## sample transition matrices
+##
 def sample_switch_trans_mat(switch_hyperparams, switch_states):
     """
     Sample P(switch transition matrix | switch_states, switch_hyperparams)
@@ -260,20 +205,87 @@ def sample_switch_trans_mat(switch_hyperparams, switch_states):
           random.dirichlet(switch_counts[n, :] + switch_hyperparams[n, :])
     return switch_trans_mat
 
+def sample_init_state_prior(init_state, init_state_hyperparams):
+    """
+    Assume I is the Dirichlet parameter that determines
+    value of the initial state S_1. Sample from its
+    conditional distribution:
+
+    P(I | S_1) \propto P(S_1 | I)P(I)
+    """
+    init_state_hyperparams = init_state_hyperparams.copy()
+    init_state_hyperparams[init_state] += 1
+    return np.random.dirichlet(init_state_hyperparams)
+
+
 def count_out_mat(outputs, hidden_state_trajectory,
                   num_hidden_states,
                   num_possible_outputs):
     """
     Generate output counts matrix (num_hidden_states x num_possible_outputs).
     """
-    count_mat = np.zeros((num_hidden_states, num_possible_outputs), dtype=np.int32)
+    count_mat = np.zeros((num_hidden_states, num_possible_outputs),
+                         dtype=np.int32)
     seq_len = len(outputs)
     for n in xrange(seq_len):
         count_mat[hidden_state_trajectory[n], outputs[n]] += 1
     return count_mat
 
+##
+## Sample switch states
+##    
+def sample_init_switch_state(init_switch_probs,
+                             switch_state_trajectory,
+                             outputs,
+                             switch_trans_mat,
+                             out_trans_mat):
+    """
+    Sample assignment of initial switch state.
+
+    Args:
+    -----
+    - init_switch_probs: initial probabilities of switch states
+    - switch_state_trajectory: switch state trajectory
+    - outputs: observed outputs
+    - switch_trans_mat: switch transition matrix
+    - out_trans_mats: array of (n_switch_states x n_outputs x n_outputs)
+      that gives the transition matrices between the outputs, for
+      each possible switch state. Typically, a (2 x n_outputs x n_outputs)
+      array.
+    - next_state: next switch state
+
+    log[P(S_1 | \pi_S, S_2, Y_1, Y_2, T_switch, T_out)] =
+      # probability of initial switch state given prior
+      log[P(S_1 | \pi_S)] +
+      # probability of transitioning to next switch state
+      # (if available) 
+      log[P(S_2 | S_1, T_switch)] 
+      # probability of transitioning from previous output
+      # to next output given initial switch state
+      log[P(Y_2 | Y_1, S_1, T_out)] 
+    """
+    possible_switch_states = np.arange(init_switch_probs.shape[0])
+    log_scores = \
+      np.log(init_state_probs)
+    if hidden_state_trajectory.shape[0] > 1:
+        # probability of transitioning from first to second switch
+        # state (only if there is a second switch state)
+        log_scores += np.log(switch_trans_mat[possible_switch_states,
+                                              switch_state_trajectory[1]])
+        # probability of emitting transitioning from first
+        # to second output under possible values of the initial
+        # hidden switch state
+        log_scores += np.log(out_trans_mats[possible_hidden_states,
+                                            outputs[0],
+                                            outputs[1]])
+    # sample value
+    probs = np.exp(log_scores - scipy.misc.logsumexp(log_scores))
+    sampled_init_switch_state = np.random.multinomial(1, probs).argmax()
+    return sampled_init_switch_state
+
 def sample_switch_states(switch_state_trajectory,
-                         trans_mats,
+                         switch_trans_mat,
+                         out_trans_mats,
                          outputs,
                          init_switch_probs,
                          init_switch_hyperparams):
@@ -290,28 +302,35 @@ def sample_switch_states(switch_state_trajectory,
     Note that this modifies the 'switch_state_trajectory' array
     rather than making a copy.
     """
-    num_switch_states = trans_mat.shape[0]
-    seq_len = len(switch_state_trajectory)
-    # sample initial switch state: P(S_1 | S_2, Y1, Y2)
-    next_switch_state = None
-    if switch_state_trajectory.shape[0] > 1:
-        next_switch_state = switch_state_trajectory[1]
+    num_switch_states = switch_trans_mat.shape[0]
+    seq_len = switch_state_trajectory.shape[0]
+    # sample initial switch state: P(S_1 | S_2, Y1, Y2, T, \pi_S)
     switch_state_trajectory[0] = \
       sample_init_switch_state(init_switch_probs,
                                switch_state_trajectory,
                                outputs,
-                               trans_mats,
-                               next_state=next_state)
-    possible_switch_states = np.arange(len(init_switch_probs))
+                               out_trans_mats)
+    possible_switch_states = np.arange(num_switch_states)
     for n in xrange(1, seq_len):
         prev_switch_state = switch_state_trajectory[n - 1]
-        log_scores = \
-          np.log(trans_mat[prev_switch_state, possible_switch_states]) + \
-          np.log(out_mat[possible_switch_states, outputs[n]])
-        if switch_state_trajectory.shape[0] > 1:
+        curr_output = outputs[n]
+        # probability of transitioning from the previous
+        # state to each of possible current states
+        log_scores = np.log(switch_trans_mat[prev_switch_state,
+                                             possible_switch_states])
+        if (n + 1) < seq_len:
             # probability of transitioning to next switch state
-            log_scores += np.log(trans_mat[possible_switch_states,
-                                           switch_state_trajectory[1]])
+            log_scores += \
+              np.log(switch_trans_mat[possible_switch_states,
+                                      switch_state_trajectory[n + 1]])
+            # probability of emitting the next outputs given
+            # the current output, for each possible value of
+            # the current switch state
+            next_output = outputs[n + 1]
+            log_scores += \
+              np.log(out_trans_mats[possible_switch_states,
+                                    curr_output,
+                                    next_output])
         # sample value
         probs = np.exp(log_scores - scipy.misc.logsumexp(log_scores))
         switch_state_trajectory[n] = np.random.multinomial(1, probs).argmax()
