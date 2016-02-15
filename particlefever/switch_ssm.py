@@ -195,7 +195,7 @@ def sample_new_ssm(old_ssm, data):
         print new_ssm.switch_trans_mat
         print "new out trans mat: "
         print new_ssm.out_trans_mats
-        time.sleep(0.2)
+        time.sleep(DEBUG_DELAY)
     # sample switch transition matrix
     new_ssm.switch_trans_mat = \
       sample_switch_trans_mat(new_ssm.switch_state_trajectory,
