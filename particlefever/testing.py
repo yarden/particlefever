@@ -42,13 +42,15 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
     def setUp(self):
         self.simple_ssm = switch_ssm.DiscreteSwitchSSM(2, 2)
         
-    def test_sample_mats(self):
+    def _test_sample_mats(self):
+        print "testing sampling of matrices"
         data = np.array([0, 1] * 50)# + [1, 1] * 5)
         self.simple_ssm.initialize()
         self.simple_ssm.add_data(data)
         switch_ssm.sample_new_ssm(self.simple_ssm, data)
 
-    def test_gibbs(self):
+    def _test_gibbs(self):
+        print "testing Gibbs sampling"
         data = np.array([0, 1] * 50)# + [1, 1] * 10)
         ssm = copy.deepcopy(self.simple_ssm)
         gibbs_obj = sampler.DiscreteSwitchSSM(ssm)
@@ -57,6 +59,15 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         pred_probs = switch_ssm.get_predictions(gibbs_obj.samples, num_preds)
         print "predicting next %d obs: " %(num_preds)
         print pred_probs
+
+    def test_filter_fit(self):
+        print "testing filter fitting"
+        data = np.array([0, 1] * 10)
+        ssm = copy.deepcopy(self.simple_ssm)
+        gibbs_obj = sampler.DiscreteSwitchSSM(ssm)
+        gibbs_obj.filter_fit(ssm, data, switch_ssm.get_predictions,
+                             num_iters=2000, burn_in=100)
+        print gibbs_obj.filter_results
         
 
 class TestDiscreteBayesHMM(unittest.TestCase):

@@ -24,7 +24,7 @@ class GibbsSampler(object):
         self.model = model
         self.samples = []
         self.sample_new_model = None
-        self.filter_samples = OrderedDict()
+        self.filter_results = OrderedDict()
 
     def __str__(self):
         return "Gibbs(model=%s)" %(self.model)
@@ -76,19 +76,22 @@ class GibbsSampler(object):
         """
         data = np.array(data)
         t1 = time.time()
+        print "DATA: ", data
         num_obs = data.shape[0]
-        num_prior_draws = 500
+        num_prior_samples = 500
+        self.filter_results = OrderedDict()
         for t in xrange(num_obs):
             curr_obs = data[0:t + 1]
             if t == 0:
                 # for special case of a single observation, generate
                 # sample from prior
-                models = init_model.sample_prior(num_prior_draws)
-                self.get_prediction_probs(lag=lag)
+                models = init_model.sample_prior(num_obs, num_prior_samples)
             else:
                 self.samples = []
                 self.sample(curr_obs, **sampler_args)
-                self.filter_models[t] = summary_func(self.samples)
+                models = self.samples
+            # predict rest of observations using prediction
+            self.filter_results[t] = predict_func(models, num_obs - t)
         t2 = time.time()
         print "filtering fit took %.2f" %(t2 - t2)
 

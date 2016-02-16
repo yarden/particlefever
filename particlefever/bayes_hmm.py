@@ -138,6 +138,7 @@ class DiscreteBayesHMM:
                 self.hidden_state_trajectory[n] = \
                   np.random.multinomial(1, self.trans_mat[prev_hidden_state, :]).argmax()
 
+##                  
 ## initialization functions
 ##
 def init_trans_mat(trans_mat_hyperparams):

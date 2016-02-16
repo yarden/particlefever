@@ -123,7 +123,10 @@ class DiscreteSwitchSSM:
             prev_output_probs = curr_output_probs
         return predictions, predicted_probs
 
-    def initialize(self):
+    def sample_prior(self, seq_len, num_samples):
+        return sample_prior(self, seq_len, num_samples)
+
+    def initialize(self, init_switch_states=0):
         """
         initialize to random model.
         """
@@ -135,7 +138,45 @@ class DiscreteSwitchSSM:
         for s in xrange(self.num_switch_states):
             self.out_trans_mats[s, :] = \
               init_out_mat(self.out_trans_mat_hyperparams)
+        # optionally initialize switch state trajectory
+        if init_switch_states > 0:
+            self.switch_state_trajectory = \
+              self.sample_prior_switch_state_trajectory(init_switch_states)
         self.initialized = True
+
+    def sample_prior_switch_state_trajectory(self, seq_len):
+        """
+        Sample random switch state trajectory from prior.
+        """
+        # sample initial state
+        init_switch_state = \
+          np.random.multinomial(1, self.init_switch_probs).argmax()
+        # make vector representation of initial state
+        prev_state = np.zeros(self.num_switch_states)
+        prev_state[init_switch_state] = 1.
+        switch_state_trajectory = [init_switch_state]
+        for n in xrange(seq_len - 1):
+            curr_state = prev_state.dot(self.switch_trans_mat)
+            switch_state = np.random.multinomial(1, curr_state).argmax()            
+            switch_state_trajectory.append(switch_state)
+            prev_state = curr_state
+        return switch_state_trajectory
+
+    def sample_prior_outputs(self, seq_len):
+        assert (len(self.switch_state_trajectory) + 1) == seq_len, \
+               "Need one less switch state for N outputs."
+        init_output = np.random.multinomial(1, self.init_out_probs)
+        outputs = [init_output]
+        # vector representation of output state
+        prev_output = np.zeros(self.num_outputs)
+        prev_output[init_output] = 1.
+        for s in xrange(self.switch_state_trajectory.shape[0]):
+            out_trans_mat = self.out_trans_mat[self.switch_state_trajectory[s], :]
+            next_output = \
+              np.random.multinomial(1, prev_output.dot(out_trans_mat)).argmax()
+            outputs.append(next_output)
+            next_output = 
+            
 
     def add_data(self, data, init_switch_states=True):
         """
@@ -163,7 +204,7 @@ class DiscreteSwitchSSM:
 def get_predictions(samples, num_preds, 
                     summary_func=np.mean):
     num_samples = len(samples)
-    num_samples = samples[0].num_samples 
+    num_outputs = samples[0].num_outputs
     all_preds = np.zeros((num_samples, num_preds, num_outputs))
     n = 0
     for n in xrange(num_samples):
@@ -172,6 +213,18 @@ def get_predictions(samples, num_preds,
         all_preds[n, :] = pred_probs
     summarized_preds = summary_func(all_preds, axis=0)
     return summarized_preds
+
+##
+## sampling from prior
+##
+def sample_prior(init_ssm, seq_len, num_samples):
+    samples = []
+    for n in xrange(num_samples):
+        # sample new parameters
+        init_ssm.initialize(init_switch_states=seq_len - 1)
+        init_ssm.sample_outp
+        samples.append(copy.deepcopy(init_ssm))
+    return samples
 
 ##
 ## initialization functions
@@ -235,10 +288,14 @@ def sample_new_ssm(old_ssm, data):
     new_ssm.switch_trans_mat = \
       sample_switch_trans_mat(new_ssm.switch_state_trajectory,
                               new_ssm.switch_trans_mat_hyperparams)
-    # sample initial state probs
+    # sample initial switch state probs
     new_ssm.init_switch_probs = \
-      sample_init_state_prior(new_ssm.switch_state_trajectory[0],
-                              new_ssm.init_switch_hyperparams)
+      sample_init_switch_prior(new_ssm.switch_state_trajectory[0],
+                               new_ssm.init_switch_hyperparams)
+    # sample initial output state probs
+    new_ssm.init_out_probs = \
+      new_ssm.init_output_prior(new_ssm.outputs[0],
+                                new_ssm.init_out_hyperparams)
     return new_ssm
 
 
@@ -259,18 +316,23 @@ def sample_switch_trans_mat(switch_hyperparams, switch_states):
           random.dirichlet(switch_counts[n, :] + switch_hyperparams[n, :])
     return switch_trans_mat
 
-
-def sample_init_state_prior(init_state, init_state_hyperparams):
+def sample_init_switch_prior(init_switch_state, init_switch_hyperparams):
     """
-    Assume I is the Dirichlet parameter that determines
-    value of the initial state S_1. Sample from its
-    conditional distribution:
-
-    P(I | S_1) \propto P(S_1 | I)P(I)
+    Sample prior probability (\pi_S) for initial switch state (since
+    initial output state is not determined by switch state).
     """
-    init_state_hyperparams = init_state_hyperparams.copy()
-    init_state_hyperparams[init_state] += 1
-    return np.random.dirichlet(init_state_hyperparams)
+    init_switch_counts = init_switch_hyperparams.copy()
+    init_switch_counts[init_switch_state] += 1
+    return np.random.dirichlet(init_switch_hyperparams)
+
+def sample_init_output_prior(init_out_state, init_out_hyperparams):
+    """
+    Sample prior probability (\pi_Y) for initial output state (since
+    initial output state is not determined by switch state).
+    """
+    init_out_counts = init_out_hyperparams.copy()
+    init_out_counts[init_out_state] += 1
+    return np.random.dirichlet(init_out_hyperparams)
 
 
 def count_out_mat(outputs, hidden_state_trajectory,
@@ -285,14 +347,6 @@ def count_out_mat(outputs, hidden_state_trajectory,
     for n in xrange(seq_len):
         count_mat[hidden_state_trajectory[n], outputs[n]] += 1
     return count_mat
-
-
-def sample_init_output(init_out_hyperparams):
-    ##
-    ## TODO: fill me in, sample P(Y_1 | \pi_Y, Y2, S1)
-    ## here
-    ##
-    pass
 
 ##
 ## Sample switch states
