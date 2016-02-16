@@ -215,8 +215,8 @@ def get_predictions(samples, num_preds,
     all_preds = np.zeros((num_samples, num_preds, num_outputs))
     n = 0
     for n in xrange(num_samples):
-        curr_hmm = samples[-1]
-        preds, pred_probs = curr_hmm.predict(num_preds)
+        curr_ssm = samples[-1]
+        preds, pred_probs = curr_ssm.predict(num_preds)
         all_preds[n, :] = pred_probs
     summarized_preds = summary_func(all_preds, axis=0)
     return summarized_preds

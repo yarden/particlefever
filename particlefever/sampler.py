@@ -61,7 +61,7 @@ class GibbsSampler(object):
             print "sampling took %.2f secs (%d final samples)" %(t2 - t1,
                                                                  num_sampled)
 
-    def filter_fit(self, init_model, data, predict_func, lag=1, **sampler_args):
+    def filter_fit(self, init_model, data, predict_func, **sampler_args):
         """
         Compute filtering estimate. Go through each observation k
         and from it compute probability of remaining t_total - k
@@ -77,7 +77,6 @@ class GibbsSampler(object):
         """
         data = np.array(data)
         t1 = time.time()
-        print "DATA: ", data
         num_obs = data.shape[0]
         num_prior_samples = 500
         self.filter_results = OrderedDict()
@@ -95,21 +94,22 @@ class GibbsSampler(object):
             self.filter_results[t] = predict_func(models, num_obs - t)
         t2 = time.time()
         print "filtering fit took %.2f" %(t2 - t2)
-
+        
     def get_prediction_probs(self, lag=1):
         """
         Get prediction probabilities for a set of observations
         assuming a lag of 1.
         """
-        if lag != 1:
-            raise Exception, "Unimplemented."
-        num_obs = len(self.filter_models)
+        num_obs = len(self.filter_results)
         if num_obs == 0:
             raise Exception, "No filtering posteriors found."
         prediction_probs = np.zeros((num_obs, self.num_outputs))
-        # get first posterior randomly
-        prediction_probs[0, :] = \
-          np.array([1 / float(self.num_outputs)] * self.num_outputs)
+        t_start = 0 - lag
+        ### TODO FINISH THIS!
+        for k in xrange(num_obs):
+            if k < 0:
+                # use prior
+                self.filter_results[0].
         for k in xrange(1, num_obs):
             models_to_use = self.filter_models[k - lag]
             posterior = self.predict_output_probs(lag, models_to_use)
