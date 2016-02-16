@@ -26,15 +26,14 @@ class DiscreteSwitchSSM:
                  init_switch_hyperparams=None,
                  init_out_hyperparams=None,
                  switch_trans_mat_hyperparams=None,
-                 out_trans_mat_hyperparams=None):
+                 out_trans_mat_hyperparams=None,
+                 sticky_switch_weight=None):
         self.model_type = "discrete_switch_ssm"
         self.initialized = False
         self.num_switch_states = num_switch_states
         self.num_outputs = num_outputs
         # switch state assignments
         self.switch_state_trajectory = None
-        # switch state transition matrices
-        self.state = None
         # output transition matrices: one for each switch state
         self.out_trans_mats = np.zeros((self.num_switch_states,
                                         self.num_outputs,
@@ -57,13 +56,20 @@ class DiscreteSwitchSSM:
         self.out_trans_mat_hyperparams = out_trans_mat_hyperparams
         # default prior hyperparameters for transition and output
         # matrix
-        self.default_trans_mat_hyperparam = 0.8
+        self.default_trans_mat_hyperparam = 1.
         self.default_out_trans_mat_hyperparam = 1.
         # make default switch transition matrix
         if self.switch_trans_mat_hyperparams is None:
             self.switch_trans_mat_hyperparams = np.ones((self.num_switch_states,
                                                      self.num_switch_states))
             self.switch_trans_mat_hyperparams *= self.default_trans_mat_hyperparam
+        # incorporate sticky prior weight on sticky transition matrix
+        self.sticky_switch_weight = sticky_switch_weight
+        self.default_sticky_switch_weight = 1.
+        if self.sticky_switch_weight is None:
+            self.sticky_switch_weight = self.default_sticky_switch_weight
+        for n in xrange(self.switch_trans_mat_hyperparams.shape[0]):
+            self.switch_trans_mat_hyperparams[n, n] += self.sticky_switch_weight
         # make default output transition matrix
         if self.out_trans_mat_hyperparams is None:
             self.out_trans_mat_hyperparams = np.ones((self.num_outputs,
