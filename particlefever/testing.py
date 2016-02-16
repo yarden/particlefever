@@ -49,12 +49,14 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         switch_ssm.sample_new_ssm(self.simple_ssm, data)
 
     def test_gibbs(self):
-        data = np.array([0, 1] * 50 + [1, 1] * 10)
+        data = np.array([0, 1] * 50)# + [1, 1] * 10)
         ssm = copy.deepcopy(self.simple_ssm)
         gibbs_obj = sampler.DiscreteSwitchSSM(ssm)
-        gibbs_obj.sample(data)
-        
-        
+        gibbs_obj.sample(data, num_iters=1000, burn_in=100)
+        num_preds = 10
+        pred_probs = switch_ssm.get_predictions(gibbs_obj.samples, num_preds)
+        print "predicting next %d obs: " %(num_preds)
+        print pred_probs
         
 
 class TestDiscreteBayesHMM(unittest.TestCase):

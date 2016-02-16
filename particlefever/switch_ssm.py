@@ -15,7 +15,7 @@ import particlefever.markov_utils as markov_utils
 import scipy
 import scipy.stats
 
-DEBUG = True
+DEBUG = False
 DEBUG_DELAY = 0.5
 
 class DiscreteSwitchSSM:
@@ -93,22 +93,35 @@ class DiscreteSwitchSSM:
         """
         if self.switch_state_trajectory is None:
             raise Exception, "Cannot predict; no hidden state trajectory."
-        last_hidden_state = self.switch_state_trajectory[-1]
-        # make a vector representation of last hidden state
-        prev_state_probs = np.zeros(self.num_switch_states)
-        prev_state_probs[last_switch_state] = 1.
+        # the last relevant switch state is the one before last
+        last_switch_state = None
+        last_switch_state = self.switch_state_trajectory[-1]
+        last_out_state = self.outputs[-1]
+        # make a vector representation of last switch state
+        prev_switch_probs = np.zeros(self.num_switch_states)
+        prev_switch_probs[last_switch_state] = 1.
+        # make a vector representation of last output state
+        prev_output_probs = np.zeros(self.num_outputs)
+        prev_output_probs[last_out_state] = 1.
         # predict transitions and subsequent outputs
-        predictions = np.zeros(num_steps)
+        predictions = np.zeros(num_steps, dtype=np.int32)
         # output probabilities
         predicted_probs = np.zeros((num_steps, self.num_outputs))
         for step in xrange(num_steps):
-            # calculate probabilities of being in
-            # states in next time step
-            curr_state_probs = prev_state_probs.dot(self.trans_mat)
+            # choice of transition matrix determined by previous switch state
+            prev_switch_state = np.random.multinomial(1, prev_switch_probs).argmax()
+            out_trans_mat = self.out_trans_mats[prev_switch_state, :]
+            # calculate probability of emitting next output
+            # given previous switch state and previous output
+            curr_output_probs = prev_output_probs.dot(out_trans_mat)
+            # calculate probability of switching to next output state
+            curr_switch_probs = prev_switch_probs.dot(self.switch_trans_mat)
             predicted_probs[step, :] = curr_output_probs
             predictions[step] = np.random.multinomial(1, curr_output_probs).argmax()
-            prev_state_probs = curr_state_probs
-        return predictions
+            # update switch state probabilities
+            prev_switch_probs = curr_switch_probs
+            prev_output_probs = curr_output_probs
+        return predictions, predicted_probs
 
     def initialize(self):
         """
@@ -132,17 +145,38 @@ class DiscreteSwitchSSM:
         self.outputs = data
         # if given data, initialize switch state trajectory
         if init_switch_states:
-            self.switch_state_trajectory = np.zeros(self.data_len,
+            self.switch_state_trajectory = np.zeros(self.data_len - 1,
                                                     dtype=np.int32)
             # choose initial state
             self.switch_state_trajectory[0] = \
               np.random.multinomial(1, self.init_switch_probs).argmax()
             # choose switch state trajectories
-            for n in xrange(1, self.data_len):
+            for n in xrange(1, self.data_len - 1):
                 prev_switch_state = self.switch_state_trajectory[n - 1]
                 trans_mat = self.switch_trans_mat[prev_switch_state, :]
                 self.switch_state_trajectory[n] = \
                   np.random.multinomial(1, trans_mat).argmax()
+
+##
+## prediction functions
+##
+def get_predictions(samples, num_preds, num_outputs=2,
+                    summary_func=np.mean):
+    num_samples = len(samples)
+    all_preds = np.zeros((num_samples, num_preds, num_outputs))
+    n = 0
+    for n in xrange(num_samples):
+        curr_hmm = samples[-1]
+        preds, pred_probs = curr_hmm.predict(num_preds)
+        all_preds[n, :] = pred_probs
+    summarized_preds = summary_func(all_preds, axis=0)
+    return summarized_preds
+
+def predict(samples, num_obs, combine=np.mean):
+    """
+    Given a set of samples, predict
+    """
+    combine(axis=1)
 
 ##
 ## initialization functions
@@ -426,8 +460,6 @@ def sample_out_trans_mats(outputs,
         curr_output = outputs[n]
         # count transition
         out_trans_mats_counts[relevant_switch_state, prev_output, curr_output] += 1
-    print "OUT MATS COUNTS: "
-    print out_trans_mats_counts
     # for each of the possible switch state values,
     # sample output transition matrix. The output transition
     # matrices are sampled row by row (each row independent.)
@@ -441,51 +473,3 @@ def sample_out_trans_mats(outputs,
 ##
 ## scoring functions
 ##
-def log_score_joint():
-    """
-    Score full joint model.
-    """
-    pass
-
-
-def log_score_switch_state_trajectory(switch_state_trajectory,
-                                      observations,
-                                      trans_mat,
-                                      out_mat,
-                                      init_probs):
-    """
-    Score hidden state assignment of a single node, given observations,
-    transition matrix, output matrix, and initial state probabilities.
-    Return a vector of log scores:
-
-    log[P(hidden_trajectory | observations, trans_mat, obs_mat, init_probs])
-    """
-    num_obs = observations.shape[0]
-    log_scores = np.zeros(num_obs, dtype=np.float64)
-    # handle special case of single observation
-    # the score is the probability of being
-    # in this initial state and emitting the single observation
-    init_hidden_state = hidden_trajectory[0]
-    # initial observation
-    init_out = observations[0]
-    if num_obs == 1:
-        # prob. of being in this initial state plus
-        # times prob. of observing given output
-        log_scores[0] = \
-          np.log(init_probs[init_hidden_state]) + \
-          np.log(out_mat[init_hidden_state, init_out])
-        return log_scores
-    # score initial state: it depends on its output and
-    # the next hidden state.
-    # prob. of being in initial hidden state times 
-    # prob. of observing output given initial state
-    log_scores[0] = \
-      np.log(init_probs[init_hidden_state]) + \
-      np.log(out_mat[init_hidden_state, init_out])
-    ### vectorized version
-    log_scores[1:] = \
-      np.log(trans_mat[hidden_trajectory[0:-1],
-                       hidden_trajectory[1:]]) + \
-      np.log(out_mat[hidden_trajectory[1:],
-                     observations[1:]])
-    return log_scores
