@@ -160,9 +160,10 @@ class DiscreteSwitchSSM:
 ##
 ## prediction functions
 ##
-def get_predictions(samples, num_preds, num_outputs=2,
+def get_predictions(samples, num_preds, 
                     summary_func=np.mean):
     num_samples = len(samples)
+    num_samples = samples[0].num_samples 
     all_preds = np.zeros((num_samples, num_preds, num_outputs))
     n = 0
     for n in xrange(num_samples):
@@ -171,12 +172,6 @@ def get_predictions(samples, num_preds, num_outputs=2,
         all_preds[n, :] = pred_probs
     summarized_preds = summary_func(all_preds, axis=0)
     return summarized_preds
-
-def predict(samples, num_obs, combine=np.mean):
-    """
-    Given a set of samples, predict
-    """
-    combine(axis=1)
 
 ##
 ## initialization functions

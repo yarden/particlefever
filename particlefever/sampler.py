@@ -13,6 +13,8 @@ import particlefever.math_utils as math_utils
 import particlefever.bayes_hmm as bayes_hmm
 import particlefever.switch_ssm as switch_ssm
 
+from collections import OrderedDict
+
 # Node types
 DISCRETE = "discrete"
 CONTINUOUS = "continuous"
@@ -22,6 +24,7 @@ class GibbsSampler(object):
         self.model = model
         self.samples = []
         self.sample_new_model = None
+        self.filter_samples = OrderedDict()
 
     def __str__(self):
         return "Gibbs(model=%s)" %(self.model)
@@ -56,6 +59,60 @@ class GibbsSampler(object):
         num_sampled = len(self.samples)
         print "sampling took %.2f secs (%d final samples)" %(t2 - t1,
                                                              num_sampled)
+
+    def filter_fit(self, init_model, data, predict_func, lag=1, **sampler_args):
+        """
+        Compute filtering estimate. Go through each observation k
+        and from it compute probability of remaining t_total - k
+        observations using prediction.
+
+        Args:
+        -----
+        - init_model: initial model (prior)
+        - data: data to fit
+        - predict_func: prediction function, which takes a set of sampled models
+          and a number of predictions, and returns an array of predictions for
+          the outputs.
+        """
+        data = np.array(data)
+        t1 = time.time()
+        num_obs = data.shape[0]
+        num_prior_draws = 500
+        for t in xrange(num_obs):
+            curr_obs = data[0:t + 1]
+            if t == 0:
+                # for special case of a single observation, generate
+                # sample from prior
+                models = init_model.sample_prior(num_prior_draws)
+                self.get_prediction_probs(lag=lag)
+            else:
+                self.samples = []
+                self.sample(curr_obs, **sampler_args)
+                self.filter_models[t] = summary_func(self.samples)
+        t2 = time.time()
+        print "filtering fit took %.2f" %(t2 - t2)
+
+    def get_prediction_probs(self, lag=1):
+        """
+        Get prediction probabilities for a set of observations
+        assuming a lag of 1.
+        """
+        if lag != 1:
+            raise Exception, "Unimplemented."
+        num_obs = len(self.filter_models)
+        if num_obs == 0:
+            raise Exception, "No filtering posteriors found."
+        prediction_probs = np.zeros((num_obs, self.num_outputs))
+        # get first posterior randomly
+        prediction_probs[0, :] = \
+          np.array([1 / float(self.num_outputs)] * self.num_outputs)
+        for k in xrange(1, num_obs):
+            models_to_use = self.filter_models[k - lag]
+            posterior = self.predict_output_probs(lag, models_to_use)
+            prediction_probs[k, :] = posterior
+        return prediction_probs
+        
+
 
 class DiscreteSwitchSSM(GibbsSampler):
     """
