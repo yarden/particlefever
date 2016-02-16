@@ -32,7 +32,7 @@ class GibbsSampler(object):
     def __repr__(self):
         return self.__str__()
 
-    def sample(self, data, num_iters=10000, burn_in=100, lag=4,
+    def sample(self, data, num_iters=10000, burn_in=100, lag=4, verbose=False,
                **kwargs):
         """
         Run posterior sampling.
@@ -57,8 +57,9 @@ class GibbsSampler(object):
             old_model = new_model
         t2 = time.time()
         num_sampled = len(self.samples)
-        print "sampling took %.2f secs (%d final samples)" %(t2 - t1,
-                                                             num_sampled)
+        if verbose:
+            print "sampling took %.2f secs (%d final samples)" %(t2 - t1,
+                                                                 num_sampled)
 
     def filter_fit(self, init_model, data, predict_func, lag=1, **sampler_args):
         """
