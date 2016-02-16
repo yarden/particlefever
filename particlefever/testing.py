@@ -52,7 +52,7 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         data = np.array([0, 1] * 50)# + [1, 1] * 10)
         ssm = copy.deepcopy(self.simple_ssm)
         gibbs_obj = sampler.DiscreteSwitchSSM(ssm)
-        gibbs_obj.sample(data, num_iters=1000, burn_in=100)
+        gibbs_obj.sample(data, num_iters=2000, burn_in=100)
         num_preds = 10
         pred_probs = switch_ssm.get_predictions(gibbs_obj.samples, num_preds)
         print "predicting next %d obs: " %(num_preds)
