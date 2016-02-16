@@ -1,3 +1,0 @@
-##
-## Scoring functions for sampling
-##
