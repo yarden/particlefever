@@ -92,6 +92,12 @@ class GibbsSampler(object):
                 models = self.samples
             # predict rest of observations using prediction
             self.filter_results[t] = predict_func(models, num_obs - t)
+            # if t == 0:
+            #     for m in models:
+            #         print m.outputs
+            #     print "FILTER RESULTS AT 0: "
+            #     print self.filter_results[t]
+            #     raise Exception, "Test"
         t2 = time.time()
         print "filtering fit took %.2f" %(t2 - t2)
         
@@ -99,24 +105,21 @@ class GibbsSampler(object):
         """
         Get prediction probabilities for a set of observations
         assuming a lag of 1.
+
+        0 1 2 3 4 5 6
         """
         num_obs = len(self.filter_results)
         if num_obs == 0:
             raise Exception, "No filtering posteriors found."
         prediction_probs = np.zeros((num_obs, self.num_outputs))
-        t_start = 0 - lag
-        ### TODO FINISH THIS!
         for k in xrange(num_obs):
-            if k < 0:
-                # use prior
-                self.filter_results[0].
-        for k in xrange(1, num_obs):
-            models_to_use = self.filter_models[k - lag]
-            posterior = self.predict_output_probs(lag, models_to_use)
+            if k - lag <= 0:
+                posterior = self.filter_results[0][0, :]
+            else:
+                posterior = self.filter_results[k - lag][0, :]
+            print "for %d using: " %(k), posterior
             prediction_probs[k, :] = posterior
         return prediction_probs
-        
-
 
 class DiscreteSwitchSSM(GibbsSampler):
     """

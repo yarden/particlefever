@@ -68,6 +68,8 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         gibbs_obj.filter_fit(ssm, data, switch_ssm.get_predictions,
                              num_iters=2000, burn_in=100)
         print gibbs_obj.filter_results
+        print "---"
+        print gibbs_obj.get_prediction_probs()
         
 
 class TestDiscreteBayesHMM(unittest.TestCase):
@@ -239,9 +241,6 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         mean_preds = self.get_mean_preds(gibbs_obj.samples)
         print "predicting using sampled HMM"
         print "mean preds: ", mean_preds
-        print " --- "
-        raise Exception, "test"
-        
 
     def test_score_hidden_state_trajectory(self):
         """
