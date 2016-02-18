@@ -98,27 +98,19 @@ class GibbsSampler(object):
     def get_prediction_probs(self, lag=1, num_outputs=2):
         """
         Get prediction probabilities for a set of observations
-        assuming a lag of 1.
-
-          0 1 2 3 4 5 6 7 8 9
-          a b c d e f g h i j
+        assuming a lag of 1 by default.
         """
         num_obs = len(self.filter_results)
         if num_obs == 0:
             raise Exception, "No filtering posteriors found."
         prediction_probs = np.zeros((num_obs, num_outputs))
-        print "0 filter results: "
-        print self.filter_results[0]
-        print "1 filter results: "
-        print self.filter_results[1]
-        for k in xrange(0, num_obs, lag):
-            print "k: ", k
-            print "k - lag: ", k - lag
-            if k - lag <= 0:
+        for k in xrange(num_obs):
+            if (k + 1 - lag) <= 0:
                 print "USING PRIOR FOR %d" %(k)
                 posterior = self.filter_results[0][0, :]
             else:
-                posterior = self.filter_results[k - lag][0, :]
+                print "USING k + 1 - lag = %d" %(k+1-lag)
+                posterior = self.filter_results[k + 1 - lag][0, :]
             prediction_probs[k, :] = posterior
         return prediction_probs
 
