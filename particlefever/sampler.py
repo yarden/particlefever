@@ -105,12 +105,15 @@ class GibbsSampler(object):
             raise Exception, "No filtering posteriors found."
         prediction_probs = np.zeros((num_obs, num_outputs))
         for k in xrange(num_obs):
+            # need to add 1 here to k to get 1-based time
+            # for lag computation
             if (k + 1 - lag) <= 0:
-                print "USING PRIOR FOR %d" %(k)
                 posterior = self.filter_results[0][0, :]
             else:
-                print "USING k + 1 - lag = %d" %(k+1-lag)
+                # also need to add 1 here to k to get 1-based time
+                # for lag computation
                 posterior = self.filter_results[k + 1 - lag][0, :]
+            # here don't add 1 to k; we're storing 0-based time
             prediction_probs[k, :] = posterior
         return prediction_probs
 
