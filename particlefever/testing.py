@@ -69,7 +69,7 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
                              num_iters=2000, burn_in=100)
         print gibbs_obj.filter_results
         print "---"
-        print gibbs_obj.get_prediction_probs()
+        print gibbs_obj.get_prediction_probs(num_outputs=ssm.num_outputs)
         
 
 class TestDiscreteBayesHMM(unittest.TestCase):

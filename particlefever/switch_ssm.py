@@ -218,7 +218,6 @@ def get_predictions(samples, num_preds,
     all_preds = np.zeros((num_samples, num_preds, num_outputs))
     n = 0
     for n in xrange(num_samples):
-        #curr_ssm = samples[-1]
         curr_ssm = samples[n]
         preds, pred_probs = curr_ssm.predict(num_preds)
         all_preds[n, :] = pred_probs

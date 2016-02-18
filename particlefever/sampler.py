@@ -32,7 +32,7 @@ class GibbsSampler(object):
     def __repr__(self):
         return self.__str__()
 
-    def sample(self, data, num_iters=10000, burn_in=100, lag=4, verbose=False,
+    def sample(self, data, num_iters=5000, burn_in=100, lag=4, verbose=False,
                **kwargs):
         """
         Run posterior sampling.
@@ -92,32 +92,33 @@ class GibbsSampler(object):
                 models = self.samples
             # predict rest of observations using prediction
             self.filter_results[t] = predict_func(models, num_obs - t)
-            # if t == 0:
-            #     for m in models:
-            #         print m.outputs
-            #     print "FILTER RESULTS AT 0: "
-            #     print self.filter_results[t]
-            #     raise Exception, "Test"
         t2 = time.time()
-        print "filtering fit took %.2f" %(t2 - t2)
+        print "filtering fit took %.2f" %(t2 - t1)
         
-    def get_prediction_probs(self, lag=1):
+    def get_prediction_probs(self, lag=1, num_outputs=2):
         """
         Get prediction probabilities for a set of observations
         assuming a lag of 1.
 
-        0 1 2 3 4 5 6
+          0 1 2 3 4 5 6 7 8 9
+          a b c d e f g h i j
         """
         num_obs = len(self.filter_results)
         if num_obs == 0:
             raise Exception, "No filtering posteriors found."
-        prediction_probs = np.zeros((num_obs, self.num_outputs))
-        for k in xrange(num_obs):
+        prediction_probs = np.zeros((num_obs, num_outputs))
+        print "0 filter results: "
+        print self.filter_results[0]
+        print "1 filter results: "
+        print self.filter_results[1]
+        for k in xrange(0, num_obs, lag):
+            print "k: ", k
+            print "k - lag: ", k - lag
             if k - lag <= 0:
+                print "USING PRIOR FOR %d" %(k)
                 posterior = self.filter_results[0][0, :]
             else:
                 posterior = self.filter_results[k - lag][0, :]
-            print "for %d using: " %(k), posterior
             prediction_probs[k, :] = posterior
         return prediction_probs
 
