@@ -420,7 +420,6 @@ def sample_switch_states(switch_state_trajectory,
 
     Args:
     -----
-
     - switch_state_trajectory: trajectory of switch states
     - trans_mats: set of transition matrices (one for each switch state)
     - outputs: set of (dependent) outputs 

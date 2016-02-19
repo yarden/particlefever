@@ -67,8 +67,6 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         gibbs_obj = sampler.DiscreteSwitchSSM(ssm)
         gibbs_obj.filter_fit(ssm, data, switch_ssm.get_predictions,
                              num_iters=2000, burn_in=100)
-        print gibbs_obj.filter_results
-        print "---"
         print gibbs_obj.get_prediction_probs(num_outputs=ssm.num_outputs)
         
 

@@ -10,6 +10,7 @@ import cProfile
 
 import particlefever
 import particlefever.bayes_hmm as bayes_hmm
+import particlefever.switch_ssm as switch_ssm
 import particlefever.sampler as sampler
 
 def run_hmm():
@@ -28,13 +29,22 @@ def run_hmm():
     gibbs_obj.sample(data)
 
 
+def run_ssm():
+    pass
+
+
 def profile_discrete_hmm():
-    print "Profiling discrete HMM"
+    print "profiling discrete HMM"
     cProfile.run('run_hmm()')
+
+
+def profile_discrete_ssm():
+    print "profiling discrete SSM"
+    cProfile.run('run_ssm()')
         
 
 def main():
-    profile_discrete_hmm()
+    profile_discrete_ssm()
 
 if __name__ == "__main__":
     main()
