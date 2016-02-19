@@ -117,12 +117,12 @@ class GibbsSampler(object):
             prediction_probs[k, :] = posterior
         return prediction_probs
 
-class DiscreteSwitchSSM(GibbsSampler):
+class DiscreteSwitchSSMGibbs(GibbsSampler):
     """
     Gibbs sampler for discrete Bayesian HMM.
     """
     def __init__(self, model):
-        super(DiscreteSwitchSSM, self).__init__(model)
+        super(DiscreteSwitchSSMGibbs, self).__init__(model)
         self.sample_new_model = switch_ssm.sample_new_ssm
 
     def __str__(self):

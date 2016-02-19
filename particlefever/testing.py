@@ -53,7 +53,7 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         print "testing Gibbs sampling"
         data = np.array([0, 1] * 50)# + [1, 1] * 10)
         ssm = copy.deepcopy(self.simple_ssm)
-        gibbs_obj = sampler.DiscreteSwitchSSM(ssm)
+        gibbs_obj = sampler.DiscreteSwitchSSMGibbs(ssm)
         gibbs_obj.sample(data, num_iters=2000, burn_in=100)
         num_preds = 10
         pred_probs = switch_ssm.get_predictions(gibbs_obj.samples, num_preds)
@@ -64,7 +64,7 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         print "testing filter fitting"
         data = np.array([0, 1] * 10)
         ssm = copy.deepcopy(self.simple_ssm)
-        gibbs_obj = sampler.DiscreteSwitchSSM(ssm)
+        gibbs_obj = sampler.DiscreteSwitchSSMGibbs(ssm)
         gibbs_obj.filter_fit(ssm, data, switch_ssm.get_predictions,
                              num_iters=2000, burn_in=100)
         print gibbs_obj.get_prediction_probs(num_outputs=ssm.num_outputs)
