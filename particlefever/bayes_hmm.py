@@ -11,6 +11,7 @@ import particlefever
 import particlefever.math_utils as math_utils
 import particlefever.markov_utils as markov_utils
 import particlefever.stat_utils as stat_utils
+import particlefever.distributions as distributions
 
 import scipy
 import scipy.stats
@@ -138,6 +139,23 @@ class DiscreteBayesHMM:
                 self.hidden_state_trajectory[n] = \
                   np.random.multinomial(1, self.trans_mat[prev_hidden_state, :]).argmax()
 
+
+##
+## counting functions
+##
+def count_out_mat(outputs, hidden_state_trajectory,
+                  num_hidden_states,
+                  num_possible_outputs):
+    """
+    Generate output counts matrix (num_hidden_states x num_possible_outputs).
+    """
+    count_mat = np.zeros((num_hidden_states, num_possible_outputs), dtype=np.int32)
+    seq_len = len(outputs)
+    for n in xrange(seq_len):
+        count_mat[hidden_state_trajectory[n], outputs[n]] += 1
+    return count_mat
+
+                  
 ##                  
 ## initialization functions
 ##
@@ -157,6 +175,40 @@ def init_out_mat(out_mat_hyperparams):
     for n in xrange(out_mat_hyperparams.shape[0]):
         out_mat[n, :] = np.random.dirichlet(out_mat_hyperparams[n, :])
     return out_mat
+
+##
+## conditional distributions (for Gibbs sampling)
+##
+def cond_init_state_prior(init_state, init_state_hyperparams):
+    """
+    Assume I is the Dirichlet parameter that determines
+    value of the initial state S_1.
+    P(I | S_1) \propto P(S_1 | I)P(I)
+    """
+    init_state_hyperparams = init_state_hyperparams.copy()
+    init_state_hyperparams[init_state] += 1
+    return distributions.Dirichlet(init_state_hyperparams)
+
+def cond_init_state(init_state_probs,
+                    hidden_state_trajectory,
+                    outputs,
+                    trans_mat,
+                    out_mat):
+    """
+    Sample assignment of initial state prior given initial state
+    hyperparameters.
+
+    P(S_0 | I, Y_0, O_mat) = P(S_0 | I)P(Y_0 | S_0)P(S_1 | S_0, T_mat)P(T_mat)
+    """
+    possible_hidden_states = np.arange(len(init_state_probs))
+    log_scores = \
+      np.log(init_state_probs) + \
+      np.log(out_mat[possible_hidden_states, outputs[0]])
+    if hidden_state_trajectory.shape[0] > 1:
+        # include next state if present
+        log_scores += np.log(trans_mat[possible_hidden_states,
+                                       hidden_state_trajectory[1]])
+    return distributions.LogMultinomial(log_scores)
         
 ##    
 ## sampling functions
@@ -164,10 +216,10 @@ def init_out_mat(out_mat_hyperparams):
 def sample_new_hmm(old_hmm, data):
     new_hmm = copy.deepcopy(old_hmm)
     # sample output matrix
-    new_hmm.out_mat = sample_out_mat(new_hmm.outputs,
-                                     new_hmm.hidden_state_trajectory,
-                                     new_hmm.out_mat_hyperparams,
-                                     new_hmm.num_hidden_states)
+    new_hmm.out_mat = cond_out_mat(new_hmm.outputs,
+                                   new_hmm.hidden_state_trajectory,
+                                   new_hmm.out_mat_hyperparams,
+                                   new_hmm.num_hidden_states).sample()
     # sample hidden states
     if DEBUG:
         print "OLD HMM: "
@@ -196,61 +248,46 @@ def sample_new_hmm(old_hmm, data):
         print new_hmm.out_mat
         time.sleep(DEBUG_DELAY)
     # sample transition matrix
-    new_hmm.trans_mat = sample_trans_mat(new_hmm.hidden_state_trajectory,
-                                         new_hmm.trans_mat_hyperparams)
+    new_hmm.trans_mat = cond_trans_mat(new_hmm.hidden_state_trajectory,
+                                       new_hmm.trans_mat_hyperparams).sample()
     # sample initial state probs
     new_hmm.init_state_probs = \
-      sample_init_state_prior(new_hmm.hidden_state_trajectory[0],
-                              new_hmm.init_state_hyperparams)
+      cond_init_state_prior(new_hmm.hidden_state_trajectory[0],
+                            new_hmm.init_state_hyperparams).sample()
     return new_hmm
 
-def sample_init_state_prior(init_state, init_state_hyperparams):
-    """
-    Assume I is the Dirichlet parameter that determines
-    value of the initial state S_1. Sample from its
-    conditional distribution:
-
-    P(I | S_1) \propto P(S_1 | I)P(I)
-    """
-    init_state_hyperparams = init_state_hyperparams.copy()
-    init_state_hyperparams[init_state] += 1
-    return np.random.dirichlet(init_state_hyperparams)
-    
-def sample_init_state(init_state_probs,
+def cond_hidden_state(state_ind,
                       hidden_state_trajectory,
-                      outputs,
                       trans_mat,
-                      out_mat):
+                      out_mat,
+                      outputs,
+                      init_state_probs,
+                      init_state_hyperparams):
     """
-    Sample assignment of initial state prior given initial state
-    hyperparameters.
-
-    P(S_0 | I, Y_0, O_mat) = P(S_0 | I)P(Y_0 | S_0)P(S_1 | S_0, T_mat)P(T_mat)
+    Conditional distribution of a hidden state.
     """
+    num_hidden_states = trans_mat.shape[0]
+    seq_len = hidden_state_trajectory.shape[0]
+    if state_ind == 0:
+        # it's the initial state
+        init_cond_dist = cond_init_state(init_state_probs,
+                                         hidden_state_trajectory,
+                                         outputs,
+                                         trans_mat,
+                                         out_mat)
+        return init_cond_dist
+    # otherwise, it's a middle (or end) state
     possible_hidden_states = np.arange(len(init_state_probs))
+    prev_hidden_state = hidden_state_trajectory[state_ind - 1]
     log_scores = \
-      np.log(init_state_probs) + \
-      np.log(out_mat[possible_hidden_states, outputs[0]])
-    if hidden_state_trajectory.shape[0] > 1:
-        # include next state if present
+      np.log(trans_mat[prev_hidden_state, possible_hidden_states]) + \
+      np.log(out_mat[possible_hidden_states, outputs[state_ind]])
+    if (state_ind + 1) < seq_len:
+        # P(S_1 | S_0): probability of transitioning to next state, if
+        # available
         log_scores += np.log(trans_mat[possible_hidden_states,
-                                       hidden_state_trajectory[1]])
-    # sample value
-    probs = np.exp(log_scores - scipy.misc.logsumexp(log_scores))
-    sampled_init_state = np.random.multinomial(1, probs).argmax()
-    return sampled_init_state
-
-def count_out_mat(outputs, hidden_state_trajectory,
-                  num_hidden_states,
-                  num_possible_outputs):
-    """
-    Generate output counts matrix (num_hidden_states x num_possible_outputs).
-    """
-    count_mat = np.zeros((num_hidden_states, num_possible_outputs), dtype=np.int32)
-    seq_len = len(outputs)
-    for n in xrange(seq_len):
-        count_mat[hidden_state_trajectory[n], outputs[n]] += 1
-    return count_mat
+                                       hidden_state_trajectory[state_ind + 1]])
+    return distributions.LogMultinomial(log_scores)
 
 def sample_hidden_states(hidden_state_trajectory,
                          trans_mat,
@@ -262,46 +299,31 @@ def sample_hidden_states(hidden_state_trajectory,
     Sample new configuration of hidden states.
     """
     num_hidden_states = trans_mat.shape[0]
-    seq_len = len(hidden_state_trajectory)
-    # sample initial state
-    next_state = None
-    if hidden_state_trajectory.shape[0] > 1:
-        next_state = hidden_state_trajectory[1]
-    if DEBUG:
-        print "prev init hidden state: ", hidden_state_trajectory[0]
-    hidden_state_trajectory[0] = sample_init_state(init_state_probs,
-                                                   hidden_state_trajectory,
-                                                   outputs,
-                                                   trans_mat,
-                                                   out_mat)
-    if DEBUG:
-        print "new init hidden state: ", hidden_state_trajectory[0]
-    possible_hidden_states = np.arange(len(init_state_probs))
-    for n in xrange(1, seq_len):
-        # Sample P(S_t | S_t-1, S_t+1, T, Y)
-        # P(S_t | rest of variables) \propto T(s_t-1, s_t)T(s_t, s_t+1)O(y_t, S_t)
-        prev_hidden_state = hidden_state_trajectory[n - 1]
-        log_scores = \
-          np.log(trans_mat[prev_hidden_state, possible_hidden_states]) + \
-          np.log(out_mat[possible_hidden_states, outputs[n]])
-        if (n + 1) < seq_len:
-            # P(S_1 | S_0): probability of transitioning to next state, if
-            # available
-            log_scores += np.log(trans_mat[possible_hidden_states,
-                                           hidden_state_trajectory[n + 1]])
-        probs = np.exp(log_scores - stat_utils.logsumexp(log_scores))
-        if DEBUG: print "probs of new hidden state: ", probs
-        hidden_state_trajectory[n] = np.random.multinomial(1, probs).argmax()
+    seq_len = hidden_state_trajectory.shape[0]
+    for state_ind in xrange(seq_len):
+        state_cond_dist = cond_hidden_state(state_ind,
+                                            hidden_state_trajectory,
+                                            trans_mat,
+                                            out_mat,
+                                            outputs,
+                                            init_state_probs,
+                                            init_state_hyperparams)
+        hidden_state_trajectory[state_ind] = state_cond_dist.sample()
     return hidden_state_trajectory
 
 def sample_out_state(hidden_state, out_mat):
+    """
+    Sampling output state. Used for initialization of models; not part
+    of Gibbs sampling moves.
+    """
     out_state = np.random.multinomial(1, out_mat[hidden_state, :]).argmax()
     return out_state
 
-def sample_trans_mat(hidden_state_trajectory,
-                     trans_mat_hyperparams):
+def cond_trans_mat(hidden_state_trajectory,
+                   trans_mat_hyperparams):
     """
-    Sample transition matrix.
+    Conditional distribution of transition matrix given
+    hidden state trajectory and transition matrix hyperparameters.
     """
     # compute the matrix transition counts 
     trans_mat_shape = (trans_mat_hyperparams.shape[0],
@@ -309,40 +331,24 @@ def sample_trans_mat(hidden_state_trajectory,
     counts_mat = \
       markov_utils.count_trans_mat(hidden_state_trajectory,
                                    trans_mat_shape)
-    if DEBUG:
-        print "counts mat: "
-        print counts_mat
-    # sample new transition matrix by iterating through
-    # rows
-    sampled_trans_mat = np.zeros(trans_mat_shape)
-    for n in xrange(sampled_trans_mat.shape[0]):
-        # add counts from likelihood (counts matrix) and
-        # from prior hyperparameters
-        trans_row_params = counts_mat[n, :] + trans_mat_hyperparams[n, :]
-        sampled_trans_mat[n, :] = np.random.dirichlet(trans_row_params)
-    return sampled_trans_mat
+    # posterior matrix with counts and hyperparameters (pseudocounts)
+    updated_mat = counts_mat + trans_mat_hyperparams
+    return distributions.DirichletMatrix(updated_mat)
 
-def sample_out_mat(outputs,
-                   hidden_state_trajectory,
-                   out_mat_hyperparams,
-                   num_hidden_states):
+def cond_out_mat(outputs,
+                 hidden_state_trajectory,
+                 out_mat_hyperparams,
+                 num_hidden_states):
     """
-    Sample output (observation) matrix.
+    Conditional distribution of output matrix given
+    hidden state trajectory and output matrix hyperparameters.
     """
     num_outputs = out_mat_hyperparams.shape[1]
-    sampled_out_mat = np.zeros((num_hidden_states, num_outputs))
     # number of occurences of each output state
     out_counts = count_out_mat(outputs, hidden_state_trajectory,
                                num_hidden_states, num_outputs)
-    if DEBUG:
-        print "OUT MAT COUNTS: "
-        print "H: ", hidden_state_trajectory
-        print "O: ", outputs
-        print out_counts
-    for n in xrange(num_hidden_states):
-        sampled_out_mat[n, :] = \
-          np.random.dirichlet(out_counts[n, :] + out_mat_hyperparams[n, :])
-    return sampled_out_mat
+    updated_mat = out_counts + out_mat_hyperparams
+    return distributions.DirichletMatrix(updated_mat)
 
 ##
 ## scoring functions
@@ -434,7 +440,6 @@ def log_score_hidden_state_trajectory(hidden_trajectory,
         log_scores[0] = \
           np.log(init_probs[init_hidden_state])
         return np.sum(log_scores)
-    print "scoring hidden trajectory: ", hidden_trajectory
     # score initial state: it depends on its output and
     # the next hidden state.
     # prob. of being in initial hidden state times 
@@ -445,8 +450,6 @@ def log_score_hidden_state_trajectory(hidden_trajectory,
     log_scores[1:] = \
       np.log(trans_mat[hidden_trajectory[0:-1],
                        hidden_trajectory[1:]])
-    print "using trans mat: ", trans_mat
-    print " -- total hidden traj score: ", np.sum(log_scores)
     return np.sum(log_scores)
 
 if __name__ == "__main__":

@@ -87,7 +87,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
                                      trans_mat_hyperparams=trans_mat_hyperparams,
                                      out_mat_hyperparams=out_mat_hyperparams)
         
-    def test_init_hmm(self):
+    def _test_init_hmm(self):
         """
         Test initialization of an HMM.
         """
@@ -120,16 +120,6 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         default_hmm.initialize()
         print default_hmm
 
-    def test_out_mat_sampling(self):
-        outputs = np.array([0, 1, 0, 1, 0, 1])
-        hidden_state_trajectory = np.array([1, 1, 1, 1, 1, 1])
-        out_mat_hyperparams = np.array([[0.3, 0.3],
-                                        [0.3, 0.3]])
-        num_hidden_states = 2
-        out_mat = bayes_hmm.sample_out_mat(outputs,
-                                           hidden_state_trajectory,
-                                           out_mat_hyperparams,
-                                           num_hidden_states)
 
     def test_log_joint_scores(self):
         """
@@ -240,7 +230,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         print "predicting using sampled HMM"
         print "mean preds: ", mean_preds
 
-    def test_score_hidden_state_trajectory(self):
+    def _test_score_hidden_state_trajectory(self):
         """
         Test scoring of hidden state trajectory.
         """
