@@ -344,7 +344,6 @@ def sample_init_output_prior(init_out_state, init_out_hyperparams):
     init_out_counts[init_out_state] += 1
     return np.random.dirichlet(init_out_hyperparams)
 
-
 def count_out_mat(outputs, hidden_state_trajectory,
                   num_hidden_states,
                   num_possible_outputs):
