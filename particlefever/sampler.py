@@ -83,8 +83,8 @@ class GibbsSampler(object):
         for t in xrange(num_obs):
             curr_obs = data[0:t + 1]
             if t == 0:
-                # for special case of a single observation, generate
-                # sample from prior
+                # for special case of first observation, sample from
+                # the prior
                 models = init_model.sample_prior(num_obs, num_prior_samples)
             else:
                 self.samples = []

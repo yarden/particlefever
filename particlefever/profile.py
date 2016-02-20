@@ -30,7 +30,12 @@ def run_hmm():
 
 
 def run_ssm():
-    pass
+    data = np.array([0, 1] * 50)# + [1, 1] * 10)
+    ssm = switch_ssm.DiscreteSwitchSSM(2, 2)
+    gibbs_obj = sampler.DiscreteSwitchSSMGibbs(ssm)
+    gibbs_obj.sample(data, num_iters=2000, burn_in=100)
+    num_preds = 50
+    pred_probs = switch_ssm.get_predictions(gibbs_obj.samples, num_preds)
 
 
 def profile_discrete_hmm():
@@ -40,7 +45,10 @@ def profile_discrete_hmm():
 
 def profile_discrete_ssm():
     print "profiling discrete SSM"
-    cProfile.run('run_ssm()')
+    cProfile.run('run_ssm()', "restats")
+    import pstats
+    p = pstats.Stats("restats")
+    p.sort_stats('cumulative').print_stats(50)
         
 
 def main():
