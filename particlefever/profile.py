@@ -24,7 +24,6 @@ def run_hmm():
                                  trans_mat_hyperparams=trans_mat_hyperparams,
                                  out_mat_hyperparams=out_mat_hyperparams)
     data = np.array([0, 1]*20)
-    print "data: ", data
     gibbs_obj = sampler.DiscreteBayesHMMGibbs(simple_hmm)
     gibbs_obj.sample(data)
 

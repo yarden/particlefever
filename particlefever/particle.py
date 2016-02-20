@@ -52,7 +52,7 @@ class ParticleFilter(object):
         """
         Reweight particles according to evidence.
         """
-        
+        pass
 
     def resample(self):
         """
