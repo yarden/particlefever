@@ -57,6 +57,9 @@ class Dirichlet(Distribution):
     def sample(self):
         return np.random.dirichlet(self.alpha)
 
+    def __str__(self):
+        return "Dirichlet(alpha=%s)" %(np.array_str(self.alpha, precision=4))
+
 class DirichletMatrix(Distribution):
     """
     Dirichlet matrix distribution. Assumes each row
@@ -87,3 +90,7 @@ class DirichletMatrix(Distribution):
         for n in xrange(self.alpha_mat.shape[0]):
             new_T[n, :] = np.random.dirichlet(self.alpha_mat[n, :])
         return new_T
+
+    def __str__(self):
+        return "DirichletMatrix(alpha_mat=%s)" %(np.array_str(self.alpha_mat,
+                                                              precision=4))
