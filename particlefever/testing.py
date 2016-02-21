@@ -16,6 +16,7 @@ import particlefever.math_utils as math_utils
 import particlefever.bayes_hmm as bayes_hmm
 import particlefever.sampler as sampler
 import particlefever.switch_ssm as switch_ssm
+import particlefever.particle_filter as particle_filter
 
 class TestGeneralScoring(unittest.TestCase):
     """
@@ -209,7 +210,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
     #     assert (mean_preds < 0.3).all(), \
     #       "Expected all predictions to be output 1 with prob. < 0.3"
 
-    def test_hmm_prediction_periodic(self):
+    def _test_hmm_prediction_periodic(self):
         print "\n"
         print "testing periodic predictions: "
         # now test it with a periodic data set
@@ -236,7 +237,8 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         """
         num_hidden_states = 2
         num_outputs = 2
-        hmm_pf = particlefever.DiscreteHMM_PF(num_hidden_states, num_outputs)
+        hmm_pf = particle_filter.DiscreteBayesHMM_PF(num_hidden_states,
+                                                     num_outputs)
         print "HMM PF: "
         print hmm_pf
         

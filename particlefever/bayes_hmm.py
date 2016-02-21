@@ -394,11 +394,16 @@ def pf_cond_outputs(outputs, particle, prior):
                               particle.hidden_state_trajectory,
                               particle.out_mat_hyperparams)
 
-def pf_trans(prev_particle):
+def pf_trans_sample(prev_particle, prior):
     """
-    Transition to new particle.
+    Sample transition to new particle given previous particle.
     """
-    pass
+    new_particle = copy.deepcopy(prev_particle)
+    # sample new hidden state trajectory
+    # sample new transition matrix
+    trans_mat = cond_trans_mat(prev_particle.hidden_state_trajectory,
+                               prev_particle.trans_mat_hyperparams).sample()
+    # sample new output matrix
 
 def pf_observe(data_point, particle):
     """
