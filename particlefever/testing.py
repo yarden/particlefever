@@ -230,6 +230,17 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         print "predicting using sampled HMM"
         print "mean preds: ", mean_preds
 
+    def test_hmm_particle_filter(self):
+        """
+        Test particle filter.
+        """
+        num_hidden_states = 2
+        num_outputs = 2
+        hmm_pf = particlefever.DiscreteHMM_PF(num_hidden_states, num_outputs)
+        print "HMM PF: "
+        print hmm_pf
+        
+
     def _test_score_hidden_state_trajectory(self):
         """
         Test scoring of hidden state trajectory.

@@ -38,7 +38,6 @@ class DiscreteBayesHMM:
                  out_mat_hyperparams=None):
         self.model_type = "discrete_bayes_hmm"
         self.initialized = False
-        # HMM state
         self.num_hidden_states = num_hidden_states
         self.num_outputs = num_outputs
         self.hidden_state_trajectory = None
@@ -128,16 +127,8 @@ class DiscreteBayesHMM:
         self.data_len = data.shape[0]
         self.outputs = data
         if init_hidden_states:
-            self.hidden_state_trajectory = np.zeros(self.data_len,
-                                                    dtype=np.int32)
-            # choose initial state
-            self.hidden_state_trajectory[0] = \
-              np.random.multinomial(1, self.init_state_probs).argmax()
-            # choose hidden state trajectories
-            for n in xrange(1, self.data_len):
-                prev_hidden_state = self.hidden_state_trajectory[n - 1]
-                self.hidden_state_trajectory[n] = \
-                  np.random.multinomial(1, self.trans_mat[prev_hidden_state, :]).argmax()
+            self.hidden_state_trajectory = \
+              init_hidden_state_trajectory(self.data_len)
 
 
 ##
@@ -149,7 +140,7 @@ def count_out_mat(outputs, hidden_state_trajectory,
     """
     Generate output counts matrix (num_hidden_states x num_possible_outputs).
     """
-    count_mat = np.zeros((num_hidden_states, num_possible_outputs), dtype=np.int32)
+    count_mat = np.zeros((num_hidden_states, num_possible_outputs), dtype=np.int)
     seq_len = len(outputs)
     for n in xrange(seq_len):
         count_mat[hidden_state_trajectory[n], outputs[n]] += 1
@@ -159,6 +150,18 @@ def count_out_mat(outputs, hidden_state_trajectory,
 ##                  
 ## initialization functions
 ##
+def init_hidden_state_trajectory(seq_len, init_state_probs, trans_mat):
+    hidden_state_trajectory = np.zeros(seq_len, dtype=np.int)
+    # choose initial state
+    hidden_state_trajectory[0] = \
+      np.random.multinomial(1, init_state_probs).argmax()
+    # choose hidden state trajectories
+    for n in xrange(1, seq_len):
+        prev_hidden_state = hidden_state_trajectory[n - 1]
+        hidden_state_trajectory[n] = \
+          np.random.multinomial(1, trans_mat[prev_hidden_state, :]).argmax()
+    return hidden_state_trajectory
+
 def init_trans_mat(trans_mat_hyperparams):
     """
     Sample initial transition matrix.
@@ -209,7 +212,7 @@ def cond_init_state(init_state_probs,
         log_scores += np.log(trans_mat[possible_hidden_states,
                                        hidden_state_trajectory[1]])
     return distributions.LogMultinomial(log_scores)
-        
+
 ##    
 ## sampling functions
 ##
@@ -349,6 +352,62 @@ def cond_out_mat(outputs,
                                num_hidden_states, num_outputs)
     updated_mat = out_counts + out_mat_hyperparams
     return distributions.DirichletMatrix(updated_mat)
+
+##
+## particle filter related classes and conditional distributions
+##
+class ParticlePrior:
+    def __init__(self, num_switch_states, num_outputs):
+        self.hmm = DiscreteBayesHMM(num_switch_states, num_outputs)
+
+class Particle:
+    def __init__(self, hidden_state_trajectory, trans_mat, out_mat):
+        self.hidden_state_trajectory = hidden_state_trajectory
+        self.trans_mat = trans_mat
+        self.out_mat = out_mat
+        
+def pf_init_prior(num_particles):
+    """
+    Initialize data from prior.
+    """
+    particles = []
+    for n in xrange(num_particles):
+        init_state_probs = np.random.dirichlet(self.init_state_hyperparams)
+        # choose transition matrix
+        trans_mat = init_trans_mat(self.trans_mat_hyperparams)
+        # choose observation matrix
+        out_mat = init_out_mat(self.out_mat_hyperparams)
+        # initialize state trajectory 
+        hidden_state_trajectory = None
+        # initialize
+        particle = Particle(hidden_state_trajectory, trans_mat, out_mat)
+        particles.append(particle)
+    return particles
+
+def pf_cond_outputs(outputs, particle, prior):
+    """
+    Conditional distribution of output given particle.
+
+    P(output | particle) = P(init_state_probs)
+    """
+    log_output = cond_out_mat(particle.outputs,
+                              particle.hidden_state_trajectory,
+                              particle.out_mat_hyperparams)
+
+def pf_trans(prev_particle):
+    """
+    Transition to new particle.
+    """
+    pass
+
+def pf_observe(data_point, particle):
+    """
+    Evaluate P(output | particle) (i.e. P(obs | S)).
+    Returns:
+      - weight for this data point given its particle
+    """
+    outputs = np.array([output])
+    log_output = pf_cond_output(outputs, particle)
 
 ##
 ## scoring functions
