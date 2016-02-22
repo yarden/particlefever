@@ -361,8 +361,8 @@ class ParticlePrior:
         self.hmm = DiscreteBayesHMM(num_switch_states, num_outputs)
 
 class Particle:
-    def __init__(self, hidden_state_trajectory, trans_mat, out_mat):
-        self.hidden_state_trajectory = hidden_state_trajectory
+    def __init__(self, hidden_state, trans_mat, out_mat):
+        self.hidden_state = hidden_state
         self.trans_mat = trans_mat
         self.out_mat = out_mat
         
@@ -377,10 +377,9 @@ def pf_init_prior(num_particles):
         trans_mat = init_trans_mat(self.trans_mat_hyperparams)
         # choose observation matrix
         out_mat = init_out_mat(self.out_mat_hyperparams)
-        # initialize state trajectory 
-        hidden_state_trajectory = None
-        # initialize
-        particle = Particle(hidden_state_trajectory, trans_mat, out_mat)
+        # initialize hidden state
+        hidden_state = np.random.multinomial(1, init_state_probs).argmax()
+        particle = Particle(hidden_state, trans_mat, out_mat)
         particles.append(particle)
     return particles
 
@@ -394,16 +393,41 @@ def pf_cond_outputs(outputs, particle, prior):
                               particle.hidden_state_trajectory,
                               particle.out_mat_hyperparams)
 
-def pf_trans_sample(prev_particle, prior):
+def pf_trans_sample(prev_particle, prior, is_init_state=False):
     """
     Sample transition to new particle given previous particle.
     """
     new_particle = copy.deepcopy(prev_particle)
-    # sample new hidden state trajectory
+    # sample new hidden state
+    if is_init_state:
+        # handle special case where this is the initial state
+        log_scores = np.log(prior.init_state_probs)
+    else:
+        possible_hidden_states = np.arange(prior.num_hidden_states)
+        log_scores = np.log(prev_particle.trans_mat[prev_hidden_state,
+                            possible_hidden_states])
+    new_hidden_state = 
+    new_particle.hidden_state_trajectory = \
+      np.array([distributions.LogMultinomial(log_scores).sample()])
+    cond_hidden_state(1, 
+                      prev_particle.hidden_state_trajectory,
+                      prev_particle.trans_mat,
+                      prev_particle.out_mat,
+                      prev_particle.outputs,
+                      prev_particle.init_state_probs,
+                      init_state_hyperparams)    
     # sample new transition matrix
-    trans_mat = cond_trans_mat(prev_particle.hidden_state_trajectory,
-                               prev_particle.trans_mat_hyperparams).sample()
+    new_particle.trans_mat = \
+      cond_trans_mat(prev_particle.hidden_state_trajectory,
+                     prev_particle.trans_mat_hyperparams).sample()
     # sample new output matrix
+    new_particle.out_mat = \
+      cond_out_mat(prev_particle.
+                   new_hmm.outputs,
+                                   new_hmm.hidden_state_trajectory,
+                                   new_hmm.out_mat_hyperparams,
+                                   new_hmm.num_hidden_states
+    
 
 def pf_observe(data_point, particle):
     """
