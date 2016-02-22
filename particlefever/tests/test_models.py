@@ -216,9 +216,11 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         """
         num_hidden_states = 2
         num_outputs = 2
-        hmm_pf = particle_filter.DiscreteBayesHMM_PF(bayes_hmm.ParticlePrior,
-                                                     num_hidden_states,
-                                                     num_outputs)
+        num_particles = 200
+        hmm_pf = particle_filter.DiscreteBayesHMM_PF(num_hidden_states,
+                                                     num_outputs,
+                                                     num_particles=num_particles)
+        hmm_pf.initialize()
         data = np.array([0, 1, 0, 1, 0, 1])
         print "HMM PF: "
         print hmm_pf
