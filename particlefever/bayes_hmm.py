@@ -361,20 +361,23 @@ class ParticlePrior:
     Prior for discrete Bayes HMM.
     """
     def __init__(self, num_hidden_states, num_outputs):
-        self.particles = []
         self.hmm = DiscreteBayesHMM(num_hidden_states, num_outputs)
 
     def initialize(self, num_particles):
         """
         Initialize set of particles.
         """
+        particles = []
         for n in xrange(num_particles):
             init_state_probs = np.random.dirichlet(self.hmm.init_state_hyperparams)
             # initialize hidden state
             hidden_state = np.random.multinomial(1, init_state_probs).argmax()
             # initialize particle with hidden state
-            particle = Particle(hidden_state, hidden_trans_counts, output_counts)
+            particle = Particle(hidden_state,
+                                self.hmm.trans_mat_hyperparams,
+                                self.hmm.out_mat_hyperparams)
             particles.append(particle)
+        return particles
 
 class Particle:
     """
@@ -386,6 +389,12 @@ class Particle:
         # counters for hidden state transitions and outputs
         self.hidden_trans_counts = hidden_trans_counts
         self.output_counts = output_counts
+
+def pf_prior():
+    """
+    Make Bayes HMM prior for particle filter.
+    """
+    return ParticlePrior()
 
 def pf_trans_sample(prev_particle, prior):
     """
@@ -400,7 +409,7 @@ def pf_trans_sample(prev_particle, prior):
     # prior counts for the each of the possible hidden states
     # given the previous hidden state
     hidden_state_prior_counts = \
-      prior.trans_mat_hyperparams[prev_particle.hidden_state, :]
+      prior.hmm.trans_mat_hyperparams[prev_particle.hidden_state, :]
     log_scores = np.log(prev_counts + hidden_state_prior_counts)
     if (log_scores == -np.inf).any():
         print "WARNING: transition probability to new particle contained -inf"
@@ -419,13 +428,14 @@ def pf_observe(data_point, particle, prior):
     Returns:
       - weight for this data point given its particle.
     """
-    out_prior_counts = prior.out_mat_hyperparams[particle.hidden_state, :]
+    out_prior_counts = prior.hmm.out_mat_hyperparams[particle.hidden_state, :]
     # weigh the particle by its probability
-    out_dist = distributions.DirMultinomial(particle.out_counts,
-                                            out_prior_counts)
-    weight = out_dist.posterior_pred_pmf[data_point]
+    out_dist = \
+      distributions.DirMultinomial(particle.output_counts[particle.hidden_state, :],
+                                   out_prior_counts)
+    weight = out_dist.posterior_pred_pmf(data_point)
     # update the particle counts
-    particle.out_counts[particle.hidden_state, data_point] += 1
+    particle.output_counts[particle.hidden_state, data_point] += 1
     return weight
 
 ##

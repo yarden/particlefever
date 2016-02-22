@@ -39,7 +39,7 @@ class ParticleFilter(object):
         self.particles = []
         # previous time step particles
         self.prev_particles = []
-        self.weights = np.array(num_particles)
+        self.weights = np.zeros(num_particles)
 
     def initialize(self):
         """
@@ -52,14 +52,17 @@ class ParticleFilter(object):
         Sample transitions for particles.
         """
         for n in xrange(self.num_particles):
-            self.particles[n] = self.trans_func(self.particles[n])
+            self.particles[n] = self.trans_func(self.particles[n], self.prior)
 
     def reweight(self, data_point):
         """
         Reweight particles according to evidence, P(e | S).
         """
         for n in xrange(self.num_particles):
-            self.weights[n] = self.observe_func(data_point, self.particles[n])
+            obs_weight = self.observe_func(data_point,
+                                           self.particles[n],
+                                           self.prior)
+            self.weights[n] = obs_weight
 
     def resample(self):
         """
@@ -75,11 +78,13 @@ class ParticleFilter(object):
         self.particles = new_particles
 
     def process_data(self, data):
+        if len(self.particles) == 0:
+            raise Exception, "Must initialize particles first."
         for n in xrange(data.shape[0]):
             # sample new transitions
-            self.sample_trans(data_point)
+            self.sample_trans(data[n])
             # correct sampled transitions based on observations
-            self.reweight()
+            self.reweight(data[n])
             # sample new particles
             self.resample()
 
@@ -116,7 +121,8 @@ class DiscreteBayesHMM_PF(ParticleFilter):
     """
     Particle filter for HMMs.
     """
-    def __init__(self, prior, num_hidden_states, num_outputs, num_particles=200):
+    def __init__(self, num_hidden_states, num_outputs, num_particles=200):
+        prior = bayes_hmm.ParticlePrior(num_hidden_states, num_outputs)
         super(DiscreteBayesHMM_PF, self).__init__(prior,
                                                   bayes_hmm.pf_trans_sample,
                                                   bayes_hmm.pf_observe,
