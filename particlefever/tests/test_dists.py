@@ -60,14 +60,15 @@ class TestDistributions(unittest.TestCase):
             print "Analytic calculation of posterior predictive distribution"
             alpha = np.ones(len(p))
             dir_mult = distributions.DirMultinomial(counts, alpha)
-            logp = dir_mult.log_predictive_pmf(state_ind)
+            logp = dir_mult.log_posterior_pred_pmf(state_ind)
             print "P(X = %d | %s): %.4f" %(state_ind,
                                            np.array_str(counts, precision=4),
                                            np.exp(logp))
             # since we're using non-zero alpha values, it shouldn't be
             # an exact match
+            abs_error = 0.02
             assert (np.allclose(emp_posterior_pred[state_ind],
-                                np.exp(logp), atol=0.02)), \
+                                np.exp(logp), atol=abs_error)), \
                    "Empirical and analytic calculation don't match."
 
 

@@ -5,11 +5,15 @@ import numpy as np
 
 import scipy
 import scipy.special
+import scipy.misc
 from scipy.special import gammaln
 
+def log2sumexp(arr):
+    max_val = arr.max()
+    return np.log2(np.sum(2**(arr - max_val))) + max_val
+
 def logsumexp(arr):
-    max_ = arr.max()
-    return np.log2(np.sum(2**(arr - max_))) + max_
+    return scipy.misc.logsumexp(arr)
 
 def logC(alpha):
     """

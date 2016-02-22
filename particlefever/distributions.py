@@ -21,6 +21,41 @@ class Distribution:
         """
         return self.sample()
 
+
+class DirMultinomial(Distribution):
+    """
+    Dirichlet-Multinomial distribution.
+    """
+    def __init__(self, prev_counts, alpha):
+        self.prev_counts = prev_counts
+        self.alpha = alpha
+        # posterior predictive distribution
+        # note: do not use logsumexp here for denominator, since
+        # the counts were never logged! this is just 'logsum'
+        self.log_posterior_pred = \
+          np.log(self.prev_counts + self.alpha) - \
+          np.log(np.sum(self.prev_counts + self.alpha))
+        self.posterior_pred = np.exp(self.log_posterior_pred)
+        
+    def log_posterior_pred_pmf(self, ind):
+        """
+        Log score of posterior predictive distribution for Dirichlet-Multinomial
+        distribution. Scores a state value index 'ind'.
+
+        If X_n represents the value of the next sample and X is the set of
+        previous observations, then this is:
+
+        P(X_n+1 = ind | X, alpha) = \int[P(X_n+1 = ind | p)P(p | X, alpha)dp]
+        """
+        return self.log_posterior_pred[ind]
+
+    def posterior_pred_pmf(self, ind):
+        return self.posterior_pred[ind]
+
+    def sample_posterior_pred(self):
+        return np.random.multinomial(1, self.posterior_pred).argmax()
+
+
 class LogMultinomial(Distribution):
     """
     Multinomial that works with log probabilities.
@@ -29,10 +64,10 @@ class LogMultinomial(Distribution):
         self.logp = logp
         self.p = np.exp(self.logp - stat_utils.logsumexp(self.logp))
 
-    def pmf(self):
+    def pmf(self, ind):
         pass
 
-    def logpmf(self):
+    def logpmf(self, ind):
         pass
 
     def sample(self):
@@ -40,6 +75,7 @@ class LogMultinomial(Distribution):
 
     def __str__(self):
         return "LogMultinomial(logp=%s)" %(np.array_str(self.logp, precision=4))
+
 
 class Dirichlet(Distribution):
     """
@@ -59,6 +95,7 @@ class Dirichlet(Distribution):
 
     def __str__(self):
         return "Dirichlet(alpha=%s)" %(np.array_str(self.alpha, precision=4))
+
 
 class DirichletMatrix(Distribution):
     """

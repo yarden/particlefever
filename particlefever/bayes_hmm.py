@@ -357,86 +357,76 @@ def cond_out_mat(outputs,
 ## particle filter related classes and conditional distributions
 ##
 class ParticlePrior:
-    def __init__(self, num_switch_states, num_outputs):
-        self.hmm = DiscreteBayesHMM(num_switch_states, num_outputs)
+    """
+    Prior for discrete Bayes HMM.
+    """
+    def __init__(self, num_hidden_states, num_outputs):
+        self.particles = []
+        self.hmm = DiscreteBayesHMM(num_hidden_states, num_outputs)
+
+    def initialize(self, num_particles):
+        """
+        Initialize set of particles.
+        """
+        for n in xrange(num_particles):
+            init_state_probs = np.random.dirichlet(self.hmm.init_state_hyperparams)
+            # initialize hidden state
+            hidden_state = np.random.multinomial(1, init_state_probs).argmax()
+            # initialize particle with hidden state
+            particle = Particle(hidden_state, hidden_trans_counts, output_counts)
+            particles.append(particle)
 
 class Particle:
-    def __init__(self, hidden_state, trans_mat, out_mat):
+    """
+    Particle for discrete Bayes HMM.
+    """
+    def __init__(self, hidden_state, hidden_trans_counts, output_counts):
+        # hidden state: the variable to be estimated
         self.hidden_state = hidden_state
-        self.trans_mat = trans_mat
-        self.out_mat = out_mat
-        
-def pf_init_prior(num_particles):
-    """
-    Initialize data from prior.
-    """
-    particles = []
-    for n in xrange(num_particles):
-        init_state_probs = np.random.dirichlet(self.init_state_hyperparams)
-        # choose transition matrix
-        trans_mat = init_trans_mat(self.trans_mat_hyperparams)
-        # choose observation matrix
-        out_mat = init_out_mat(self.out_mat_hyperparams)
-        # initialize hidden state
-        hidden_state = np.random.multinomial(1, init_state_probs).argmax()
-        particle = Particle(hidden_state, trans_mat, out_mat)
-        particles.append(particle)
-    return particles
+        # counters for hidden state transitions and outputs
+        self.hidden_trans_counts = hidden_trans_counts
+        self.output_counts = output_counts
 
-def pf_cond_outputs(outputs, particle, prior):
-    """
-    Conditional distribution of output given particle.
-
-    P(output | particle) = P(init_state_probs)
-    """
-    log_output = cond_out_mat(particle.outputs,
-                              particle.hidden_state_trajectory,
-                              particle.out_mat_hyperparams)
-
-def pf_trans_sample(prev_particle, prior, is_init_state=False):
+def pf_trans_sample(prev_particle, prior):
     """
     Sample transition to new particle given previous particle.
     """
+    # sample transition to new particle using posterior predictive
+    # dirichlet distribution
     new_particle = copy.deepcopy(prev_particle)
+    # get the relevant counts (i.e. counts conditioned on the previous state)
+    prev_counts = \
+      prev_particle.hidden_trans_counts[prev_particle.hidden_state, :]
+    # prior counts for the each of the possible hidden states
+    # given the previous hidden state
+    hidden_state_prior_counts = \
+      prior.trans_mat_hyperparams[prev_particle.hidden_state, :]
+    log_scores = np.log(prev_counts + hidden_state_prior_counts)
+    if (log_scores == -np.inf).any():
+        print "WARNING: transition probability to new particle contained -inf"
     # sample new hidden state
-    if is_init_state:
-        # handle special case where this is the initial state
-        log_scores = np.log(prior.init_state_probs)
-    else:
-        possible_hidden_states = np.arange(prior.num_hidden_states)
-        log_scores = np.log(prev_particle.trans_mat[prev_hidden_state,
-                            possible_hidden_states])
-    new_hidden_state = 
-    new_particle.hidden_state_trajectory = \
-      np.array([distributions.LogMultinomial(log_scores).sample()])
-    cond_hidden_state(1, 
-                      prev_particle.hidden_state_trajectory,
-                      prev_particle.trans_mat,
-                      prev_particle.out_mat,
-                      prev_particle.outputs,
-                      prev_particle.init_state_probs,
-                      init_state_hyperparams)    
-    # sample new transition matrix
-    new_particle.trans_mat = \
-      cond_trans_mat(prev_particle.hidden_state_trajectory,
-                     prev_particle.trans_mat_hyperparams).sample()
-    # sample new output matrix
-    new_particle.out_mat = \
-      cond_out_mat(prev_particle.
-                   new_hmm.outputs,
-                                   new_hmm.hidden_state_trajectory,
-                                   new_hmm.out_mat_hyperparams,
-                                   new_hmm.num_hidden_states
+    next_state_dist = distributions.DirMultinomial(prev_counts,
+                                                   hidden_state_prior_counts)
+    new_particle.hidden_state = next_state_dist.sample_posterior_pred()
+    # update the particle's state transition count
+    new_particle.hidden_trans_counts[prev_particle.hidden_state,
+                                     new_particle.hidden_state] += 1
+    return new_particle
     
-
-def pf_observe(data_point, particle):
+def pf_observe(data_point, particle, prior):
     """
     Evaluate P(output | particle) (i.e. P(obs | S)).
     Returns:
-      - weight for this data point given its particle
+      - weight for this data point given its particle.
     """
-    outputs = np.array([output])
-    log_output = pf_cond_output(outputs, particle)
+    out_prior_counts = prior.out_mat_hyperparams[particle.hidden_state, :]
+    # weigh the particle by its probability
+    out_dist = distributions.DirMultinomial(particle.out_counts,
+                                            out_prior_counts)
+    weight = out_dist.posterior_pred_pmf[data_point]
+    # update the particle counts
+    particle.out_counts[particle.hidden_state, data_point] += 1
+    return weight
 
 ##
 ## scoring functions

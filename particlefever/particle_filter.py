@@ -22,16 +22,16 @@ class ParticleFilter(object):
     """
     Particle filter.
     """
-    def __init__(self, prior_func, trans_func, observe_func,
+    def __init__(self, prior, trans_func, observe_func,
                  num_particles=200):
         """
         Args:
         -----
-        - prior_func: prior distribution function
+        - prior: prior object
         - trans_func: transition distribution function
         - observe_func: observation distribution function
         """
-        self.prior_func = prior_func
+        self.prior = prior
         self.trans_func = trans_func
         self.observe_func = observe_func
         self.num_particles = num_particles
@@ -41,12 +41,11 @@ class ParticleFilter(object):
         self.prev_particles = []
         self.weights = np.array(num_particles)
 
-    def init(self):
+    def initialize(self):
         """
         Initialize particle using prior.
         """
-        for n in xrange(self.num_particles):
-            self.particles[n] = self.prior_func()
+        self.particles = self.prior.initialize(self.num_particles)
 
     def sample_trans(self, num_trans=1):
         """
@@ -75,16 +74,14 @@ class ParticleFilter(object):
         # save new particles
         self.particles = new_particles
 
-    def next_time(self, data_point):
-        """
-        Process next time point.
-        """
-        # sample new transitions
-        self.sample_trans(data_point)
-        # correct sampled transitions based on observations
-        self.reweight()
-        # sample new particles
-        self.resample()
+    def process_data(self, data):
+        for n in xrange(data.shape[0]):
+            # sample new transitions
+            self.sample_trans(data_point)
+            # correct sampled transitions based on observations
+            self.reweight()
+            # sample new particles
+            self.resample()
 
 ##
 ## helper functions for particle filter
@@ -119,8 +116,8 @@ class DiscreteBayesHMM_PF(ParticleFilter):
     """
     Particle filter for HMMs.
     """
-    def __init__(self, num_hidden_states, num_outputs, num_particles=200):
-        super(DiscreteBayesHMM_PF, self).__init__(bayes_hmm.pf_init_prior,
+    def __init__(self, prior, num_hidden_states, num_outputs, num_particles=200):
+        super(DiscreteBayesHMM_PF, self).__init__(prior,
                                                   bayes_hmm.pf_trans_sample,
                                                   bayes_hmm.pf_observe,
                                                   num_particles=num_particles)
