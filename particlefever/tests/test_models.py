@@ -115,7 +115,6 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         hmm1 = copy.deepcopy(self.simple_hmm)
         hmm1.trans_mat_hyperparams = trans_mat_hyperparams
         hmm1.out_mat_hyperparams = out_mat_hyperparams
-        
         hmm1.hidden_state_trajectory = np.array([0, 1] * num_pairs)
         # deterministic constant switching
         # with peaked output for each state
@@ -227,7 +226,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         hmm_pf.process_data(data)
         
 
-    def _test_score_hidden_state_trajectory(self):
+    def test_score_hidden_state_trajectory(self):
         """
         Test scoring of hidden state trajectory.
         """
