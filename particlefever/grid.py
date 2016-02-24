@@ -29,8 +29,6 @@ class GridDiscreteBayesHMM:
         seq_len = data.shape[0]
         print "solving HMM by gridding (%d data points)" %(seq_len)
         t1 = time.time()
-        if os.path.isfile(output_fname):
-            raise Exception, "%s exists." %(output_fname)
         out_file = open(output_fname, "w")
         for state_point in make_space(data):
             #print "state point: ", state_point
@@ -109,11 +107,12 @@ def main():
     num_pairs = 5
     data = np.array([0, 1] * num_pairs)
     init_probs = np.array([0.5, 0.5])
+    num_states = 2
     # settings for hyperparameters
-    trans_alpha = 1.
+    trans_alpha = 1. / num_states
     trans_mat_hyperparams = np.ones((2, 2))
     trans_mat_hyperparams *= trans_alpha 
-    out_alpha = 1.
+    out_alpha = 1. / num_states
     out_mat_hyperparams = np.ones((2, 2))
     out_mat_hyperparams *= out_alpha
     init_state_hyperparams = np.ones(2)

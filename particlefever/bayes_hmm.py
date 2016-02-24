@@ -16,7 +16,7 @@ import particlefever.distributions as distributions
 import scipy
 import scipy.stats
 
-DEBUG = True
+DEBUG = False
 DEBUG_DELAY = 0.05
 
 ##
