@@ -4,11 +4,15 @@
 import os
 import sys
 import time
+import itertools
 
 import numpy as np
 
 import particlefever
 import particlefever.bayes_hmm as bayes_hmm
+
+import cPickle as pickle
+import shelve
 
 class GridDiscreteBayesHMM:
     """
@@ -17,12 +21,55 @@ class GridDiscreteBayesHMM:
     def __init__(self, hmm):
         self.hmm = hmm
 
-    def solve(self):
+    def solve(self, data, output_fname):
         """
         Solve by gridding.
         """
-        pass
+        num_computations = 0
+        seq_len = data.shape[0]
+        print "solving HMM by gridding (%d data points)" %(seq_len)
+        t1 = time.time()
+        if os.path.isfile(output_fname):
+            raise Exception, "%s exists." %(output_fname)
+        db = shelve.open(output_fname)
+        for state_point in make_space(data):
+            #print "state point: ", state_point
+            self.hmm.trans_mat = state_point[0]
+            self.hmm.out_mat = state_point[1]
+            self.hmm.hidden_state_trajectory = state_point[2]
+            log_score = bayes_hmm.log_score_joint(self.hmm)
+            # index results by hidden state trajectory
+            if self.hmm.hidden_state_trajectory not in db:
+                db[self.hmm.hidden_state_trajectory] = []
+            db[self.hidden_state_trajectory].append((state_point, log_score))
+            if (num_computations % 100000) == 0:
+                print "through %d configurations" %(num_computations)
+            num_computations += 1
+        db.close()
+        t2 = time.time()
+        print "made %d computations in %.2f mins" %(num_computations,
+                                                    (t2 - t1)/60.)
 
+def make_space(data):
+    """
+    Generate space of HMM.
+    """
+    seq_len = data.shape[0]
+    num_hidden_trajectories = np.power(2, seq_len)
+    # calculate number of computations to be made
+#    num_computations = \
+#      np.log10(num_mats) + np.log10(num_mats) + np.log10(num_hidden_trajectories)
+    for trans_mat in grid_prob_matrix():
+        for emit_mat in grid_prob_matrix():
+            for hidden_trajectory in get_hidden_state_space(seq_len):
+                yield (trans_mat, emit_mat, hidden_trajectory)
+    
+def get_hidden_state_space(seq_len, num_states=2):
+    if num_states != 2:
+        raise Exception, "Only implemented for binary states."
+    for seq in itertools.product("01", repeat=seq_len):
+        yield np.array(map(int, seq))
+    
 def grid_prob_matrix(shape=(2,2), num_prob_bins=20):
     """
     Returns:
@@ -32,26 +79,47 @@ def grid_prob_matrix(shape=(2,2), num_prob_bins=20):
         raise Exception, "Only defined for 2x2 matrices."
     num_mats = np.power(num_prob_bins, 2)
     mats = np.zeros((num_mats, shape[0], shape[1]))
-    prob_bins = np.linspace(0., 1., num_prob_bins)
+    near_zero = np.power(10., -2)
+    near_one = 1 - near_zero
+    prob_bins = np.linspace(near_zero, near_one, num_prob_bins)
     n = 0
     t1 = time.time()
     for row1 in prob_bins:
         for row2 in prob_bins:
             curr_mat = np.array([[row1, 1 - row1],
                                  [row2, 1 - row2]])
-            mats[n, :] = curr_mat
-            n += 1
-    t2 = time.time()
-    print "generated %d matrices in %.2f mins" %(n, (t2 - t1)/60.)
-    assert (n == num_mats), "Did not generated all matrices."
-    return mats
+            yield curr_mat
+
+def save_state_space(output_fname):
+    """
+    Save state space.
+    """
+    pass
 
 def main():
-    #hmm = bayes_hmm.DiscreteBayesHMM(2, 2)
-    #gridder = GridDiscreteBayesHMM(hmm)
-    import itertools
-    print "beginning iteration..."
-    mats = grid_prob_matrix()
+    num_pairs = 5
+    data = np.array([0, 1] * num_pairs)
+    init_probs = np.array([0.5, 0.5])
+    # settings for hyperparameters
+    trans_alpha = 1.
+    trans_mat_hyperparams = np.ones((2, 2))
+    trans_mat_hyperparams *= trans_alpha 
+    out_alpha = 1.
+    out_mat_hyperparams = np.ones((2, 2))
+    out_mat_hyperparams *= out_alpha
+    init_state_hyperparams = np.ones(2)
+    init_state_hyperparams *= 1. 
+    # make HMM
+    hmm_obj = \
+      bayes_hmm.DiscreteBayesHMM(2, 2,
+                                 trans_mat_hyperparams=trans_mat_hyperparams,
+                                 out_mat_hyperparams=out_mat_hyperparams,
+                                 init_state_hyperparams=init_state_hyperparams)
+    hmm_obj.init_probs = init_probs
+    hmm_obj.outputs = data
+    gridder = GridDiscreteBayesHMM(hmm_obj)
+    gridder.solve(data, "./hmm_result")
+    
     
 if __name__ == "__main__":
     main()

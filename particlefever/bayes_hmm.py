@@ -16,8 +16,8 @@ import particlefever.distributions as distributions
 import scipy
 import scipy.stats
 
-DEBUG = True
-DEBUG_DELAY = 0.005
+DEBUG = False
+DEBUG_DELAY = 0.05
 
 ##
 ## TODO:
@@ -474,12 +474,13 @@ def log_score_joint(hmm_obj):
     # score output matrix
     log_out_mat = \
       log_score_out_mat(out_mat, out_mat_hyperparams)
-    print "log total: "
-    print "*" * 5
-    print "log hidden traj: ", log_hidden_trajectory
-    print "log outputs: ", log_outputs
-    print "log_trans mat: ", log_trans_mat
-    print "log_out mat: ", log_out_mat
+    if DEBUG:
+        print "log total: "
+        print "*" * 5
+        print "log hidden traj: ", log_hidden_trajectory
+        print "log outputs: ", log_outputs
+        print "log_trans mat: ", log_trans_mat
+        print "log_out mat: ", log_out_mat
     log_total = \
       log_hidden_trajectory + \
       log_outputs + \
@@ -497,7 +498,6 @@ def log_score_out_mat(out_mat, out_mat_hyperparams):
     for n in xrange(out_mat.shape[0]):
         log_score += scipy.stats.dirichlet.logpdf(out_mat[n, :],
                                                   out_mat_hyperparams[n, :])
-    print "log score out mat ===> ", log_score
     return log_score
 
 def log_score_trans_mat(trans_mat, trans_mat_hyperparams):
@@ -505,7 +505,6 @@ def log_score_trans_mat(trans_mat, trans_mat_hyperparams):
     for n in xrange(trans_mat.shape[0]):
         log_score += scipy.stats.dirichlet.logpdf(trans_mat[n, :],
                                                   trans_mat_hyperparams[n, :])
-    print "log trans mat --> ", log_score
     return log_score
 
 def log_score_hidden_state_trajectory(hidden_trajectory,
