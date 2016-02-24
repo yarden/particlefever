@@ -16,8 +16,8 @@ import particlefever.distributions as distributions
 import scipy
 import scipy.stats
 
-DEBUG = False
-DEBUG_DELAY = 0.5
+DEBUG = True
+DEBUG_DELAY = 0.005
 
 ##
 ## TODO:
@@ -128,7 +128,9 @@ class DiscreteBayesHMM:
         self.outputs = data
         if init_hidden_states:
             self.hidden_state_trajectory = \
-              init_hidden_state_trajectory(self.data_len)
+              init_hidden_state_trajectory(self.data_len,
+                                           self.init_state_probs,
+                                           self.trans_mat)
 
 
 ##
@@ -150,8 +152,11 @@ def count_out_mat(outputs, hidden_state_trajectory,
 ##                  
 ## initialization functions
 ##
-def init_hidden_state_trajectory(seq_len, init_state_probs, trans_mat):
+def init_hidden_state_trajectory(seq_len, init_state_probs, trans_mat,
+                                 all_one_state=False):
     hidden_state_trajectory = np.zeros(seq_len, dtype=np.int)
+    if all_one_state:
+        return hidden_state_trajectory
     # choose initial state
     hidden_state_trajectory[0] = \
       np.random.multinomial(1, init_state_probs).argmax()

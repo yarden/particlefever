@@ -62,19 +62,24 @@ def plot_logscores_vary_alpha():
         log_scores.append([out_alpha, log_score1, log_score2, ratio])
     # plot results
     log_scores = np.array(log_scores)
-    plt.figure()
+    plt.figure(figsize=(7,6))
     sns.set_style("ticks")
     plt.ylabel(r"Log scores ratio, periodic vs. fair hidden states ($\log_{2}$)")
     plt.xlabel(r"Emission matrix hyperparameter, $\alpha_E$")
-    plt.title(r"Hidden state estimation ($\alpha_T = %.1f$)" \
-              %(trans_alpha))
-    plt.axhline(y=0, color="#999999", label="Equally scoring modes")
+    plt.title(r"Hidden state estimation (%d data points, $\alpha_T = %.1f$)" \
+              %(len(data), trans_alpha))
+    # find point on x-axis where the scores are closest
+    min_ind = np.argmin(abs(log_scores[:, 3]))
+    min_emit_alpha = log_scores[:, 0][min_ind]
+    print "equal mode alpha value: ", min_emit_alpha
+    #plt.axhline(y=0, color="#999999", label="Equally scoring modes")
+    plt.axvline(x=min_emit_alpha, color="#999999", label="Equally scoring modes")
     plt.plot(log_scores[:, 0], log_scores[:, 3], color="k")
     plt.legend(loc="upper right")
     # find point where ratio is closest to 0
-    sns.despine(trim=True, offset=2)
+    sns.despine(trim=True, offset=4)
     plt.savefig("./logscores_periodic_vs_fair_vary_alpha.pdf")
-    plt.show()
+#    plt.show()
 
 def main():
     plot_logscores_vary_alpha()
