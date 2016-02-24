@@ -31,7 +31,7 @@ class GridDiscreteBayesHMM:
         t1 = time.time()
         if os.path.isfile(output_fname):
             raise Exception, "%s exists." %(output_fname)
-        db = shelve.open(output_fname)
+        out_file = open(output_fname, "w")
         for state_point in make_space(data):
             #print "state point: ", state_point
             self.hmm.trans_mat = state_point[0]
@@ -39,16 +39,20 @@ class GridDiscreteBayesHMM:
             self.hmm.hidden_state_trajectory = state_point[2]
             log_score = bayes_hmm.log_score_joint(self.hmm)
             hidden_traj_str = "".join(map(str, self.hmm.hidden_state_trajectory))
+            trans_mat_str = np.array_str(self.hmm.trans_mat,
+                                        precision=4).replace("\n", ",")
+            out_mat_str = np.array_str(self.hmm.out_mat,
+                                       precision=4).replace("\n", ",")
+            entry = "%s\t%s\t%s\t%.4f\n" %(hidden_traj_str,
+                                           trans_mat_str,
+                                           out_mat_str,
+                                           log_score)
+            out_file.write(entry)
             # index results by hidden state trajectory
-            if hidden_traj_str not in db:
-                db[hidden_traj_str] = []
-            db[hidden_traj_str] = db[hidden_staj_str] + [(state_point, log_score)]
             if (num_computations % 100000) == 0:
                 print "through %d configurations" %(num_computations)
             num_computations += 1
-            if num_computations == 10000:
-                break
-        db.close()
+        out_file.close()
         t2 = time.time()
         print "made %d computations in %.2f mins" %(num_computations,
                                                     (t2 - t1)/60.)
@@ -62,10 +66,11 @@ def make_space(data):
     # calculate number of computations to be made
 #    num_computations = \
 #      np.log10(num_mats) + np.log10(num_mats) + np.log10(num_hidden_trajectories)
-    for trans_mat in grid_prob_matrix():
-        for emit_mat in grid_prob_matrix():
-            for hidden_trajectory in get_hidden_state_space(seq_len):
+    for hidden_trajectory in get_hidden_state_space(seq_len):
+        for trans_mat in grid_prob_matrix():
+            for emit_mat in grid_prob_matrix():
                 yield (trans_mat, emit_mat, hidden_trajectory)
+
     
 def get_hidden_state_space(seq_len, num_states=2):
     if num_states != 2:
