@@ -38,13 +38,16 @@ class GridDiscreteBayesHMM:
             self.hmm.out_mat = state_point[1]
             self.hmm.hidden_state_trajectory = state_point[2]
             log_score = bayes_hmm.log_score_joint(self.hmm)
+            hidden_traj_str = "".join(map(str, self.hmm.hidden_state_trajectory))
             # index results by hidden state trajectory
-            if self.hmm.hidden_state_trajectory not in db:
-                db[self.hmm.hidden_state_trajectory] = []
-            db[self.hidden_state_trajectory].append((state_point, log_score))
+            if hidden_traj_str not in db:
+                db[hidden_traj_str] = []
+            db[hidden_traj_str] = db[hidden_staj_str] + [(state_point, log_score)]
             if (num_computations % 100000) == 0:
                 print "through %d configurations" %(num_computations)
             num_computations += 1
+            if num_computations == 10000:
+                break
         db.close()
         t2 = time.time()
         print "made %d computations in %.2f mins" %(num_computations,
