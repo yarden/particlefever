@@ -21,31 +21,37 @@ class GridDiscreteBayesHMM:
         """
         Solve by gridding.
         """
-        
-        
+        pass
 
-def grid_prob_matrix(shape, num_prob_bins=200):
+def grid_prob_matrix(shape=(2,2), num_prob_bins=20):
     """
     Returns:
       An array of np.arrays and a bin step
     """
-#    prob_bins = np.linspace()
-#    matrices = np.array()
-    for row in shape[0]:
-        for col in shape[1]:
-            pass
-             
+    if not (shape[0] == shape[1] == 2):
+        raise Exception, "Only defined for 2x2 matrices."
+    num_mats = np.power(num_prob_bins, 2)
+    mats = np.zeros((num_mats, shape[0], shape[1]))
+    prob_bins = np.linspace(0., 1., num_prob_bins)
+    n = 0
+    t1 = time.time()
+    for row1 in prob_bins:
+        for row2 in prob_bins:
+            curr_mat = np.array([[row1, 1 - row1],
+                                 [row2, 1 - row2]])
+            mats[n, :] = curr_mat
+            n += 1
+    t2 = time.time()
+    print "generated %d matrices in %.2f mins" %(n, (t2 - t1)/60.)
+    assert (n == num_mats), "Did not generated all matrices."
+    return mats
 
 def main():
     #hmm = bayes_hmm.DiscreteBayesHMM(2, 2)
     #gridder = GridDiscreteBayesHMM(hmm)
     import itertools
-    t1 = time.time()
-    for c in itertools.count((100**4) * (100**4) * (2**10)):
-        pass
-    t2 = time.time()
-    print "count took %.2f mins" %(t2 - t1)
-        
-
+    print "beginning iteration..."
+    mats = grid_prob_matrix()
+    
 if __name__ == "__main__":
     main()
