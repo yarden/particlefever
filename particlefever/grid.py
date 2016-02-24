@@ -47,6 +47,7 @@ class GridDiscreteBayesHMM:
                                            trans_mat_str,
                                            out_mat_str,
                                            log_score)
+            print entry
             out_file.write(entry)
             # index results by hidden state trajectory
             if (num_computations % 100000) == 0:
