@@ -10,19 +10,14 @@ import numpy as np
 import particlefever
 import particlefever.switch_ssm as switch_ssm
 import particlefever.bayes_hmm as bayes_hmm
-
-class Particle:
-    """
-    Particle representation of state.
-    """
-    def __init__(self):
-        pass
+import particlefever.distributions as distributions
 
 class ParticleFilter(object):
     """
     Particle filter.
     """
     def __init__(self, prior, trans_func, observe_func,
+                 init_weights_func,
                  num_particles=500):
         """
         Args:
@@ -30,6 +25,7 @@ class ParticleFilter(object):
         - prior: prior object
         - trans_func: transition distribution function
         - observe_func: observation distribution function
+        - init_weights_func: initialize weights function
         """
         self.prior = prior
         self.trans_func = trans_func
@@ -39,13 +35,17 @@ class ParticleFilter(object):
         self.particles = []
         # previous time step particles
         self.prev_particles = []
-        self.weights = np.zeros(num_particles)
+        self.weights = np.ones(num_particles) / float(self.num_particles)
 
     def initialize(self):
         """
         Initialize particle using prior.
         """
         self.particles = self.prior.initialize(self.num_particles)
+        self.weights = self.init_weights_func
+        print "initial particles: "
+        print map(str, self.particles)
+        print "==" * 5
 
     def sample_trans(self, num_trans=1):
         """
@@ -60,9 +60,11 @@ class ParticleFilter(object):
         """
         norm_factor = 0.
         for n in xrange(self.num_particles):
-            self.weights[n] = self.observe_func(data_point,
-                                                self.particles[n],
-                                                self.prior)
+            # weights updated multiplicatively
+#            print "weights: ", self.weights
+            self.weights[n] *= self.observe_func(data_point,
+                                                 self.particles[n],
+                                                 self.prior)
             norm_factor += self.weights[n]
         # renormalize weights
         self.weights /= norm_factor
@@ -90,6 +92,10 @@ class ParticleFilter(object):
             self.reweight(data[n])
             # sample new particles
             self.resample()
+        print "particles at end: "
+        print "--" * 5
+        for n in xrange(self.num_particles):
+            print self.particles[n], " weight: ", self.weights[n]
 
             
 class DiscreteBayesHMM_PF(ParticleFilter):
@@ -105,14 +111,34 @@ class DiscreteBayesHMM_PF(ParticleFilter):
                                                   bayes_hmm.pf_observe,
                                                   num_particles=num_particles)
 
-    def predict_output(self):
+    def predict_output(self, num_outputs=1):
         """
         Predict output given current set of particles.
         """
         possible_outputs = np.arange(self.num_outputs)
         output_probs = np.zeros(self.num_outputs)
-        for out in possible_outputs:
-            self.particles
+        # first predict transition of particles to new hidden
+        # state
+        new_particles = []
+        for prev_particle in self.particles:
+            particle = bayes_hmm.pf_trans_sample(prev_particle, self.prior)
+            new_particles.append(particle)
+        # then sample an output from each particle and take
+        # the average
+        out_mat_hyperparams = self.prior.hmm.out_mat_hyperparams
+        
+        for curr_particle in new_particles:
+            hidden_state = curr_particle.hidden_state
+            pred_dist = \
+              distributions.DirMultinomial(particle.output_counts[hidden_state, :],
+                                           out_mat_hyperparams[hidden_state, :])
+            sampled_output = pred_dist.sample_posterior_pred()
+            print "sampled output: ", sampled_output
+            output_probs[sampled_output] += 1
+        output_probs /= float(self.num_particles)
+        print "output probs: "
+        print output_probs
+            
 
     def __str__(self):
         return "DiscreteBayesHMM_PF(num_particles=%d)" %(self.num_particles)
@@ -130,7 +156,7 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
 ##
 def sample_particle_inds(w, n):
     """
-    Return n random indices, where the probability if index
+    Return n random indices, where the probability of index
     is given by w[i].
     Args:
     - w (array_like): probability weights

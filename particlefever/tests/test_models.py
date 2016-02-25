@@ -192,7 +192,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         print "\n"
         print "testing periodic predictions: "
         # now test it with a periodic data set
-        data = np.array([0, 1]*20)
+        data = np.array([0, 1] * 20)
         print "data: ", data
         hmm_obj = copy.deepcopy(self.simple_hmm)
         # initialize it with the right configuration
@@ -215,16 +215,18 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         """
         num_hidden_states = 2
         num_outputs = 2
-        num_particles = 200
+        num_particles = 50
         hmm_pf = particle_filter.DiscreteBayesHMM_PF(num_hidden_states,
                                                      num_outputs,
                                                      num_particles=num_particles)
         hmm_pf.initialize()
-        data = np.array([0, 1, 0, 1, 0, 1])
+        data = np.array([0, 1] * 50)
+        #data = np.array([0, 0] * 50)
         print "HMM PF: "
         print hmm_pf
         hmm_pf.process_data(data)
-        
+        print "predicting output..."
+        hmm_pf.predict_output()
 
     def test_score_hidden_state_trajectory(self):
         """

@@ -374,13 +374,16 @@ class ParticlePrior:
         """
         particles = []
         for n in xrange(num_particles):
+            # use the initial state hyperparameters 
             init_state_probs = np.random.dirichlet(self.hmm.init_state_hyperparams)
             # initialize hidden state
             hidden_state = np.random.multinomial(1, init_state_probs).argmax()
             # initialize particle with hidden state
+            init_trans_mat = np.zeros(self.hmm.trans_mat_hyperparams.shape)
+            init_out_mat = np.zeros(self.hmm.out_mat_hyperparams.shape)
             particle = Particle(hidden_state,
-                                self.hmm.trans_mat_hyperparams,
-                                self.hmm.out_mat_hyperparams)
+                                init_trans_mat,
+                                init_out_mat)
             particles.append(particle)
         return particles
 
@@ -395,11 +398,24 @@ class Particle:
         self.hidden_trans_counts = hidden_trans_counts
         self.output_counts = output_counts
 
+    def __str__(self):
+        return "DiscBayesHMMParticle(hidden_state=%s; " \
+               "trans_counts=%s, out_counts=%s)" \
+               %(str(self.hidden_state),
+                 np.array_str(self.hidden_trans_counts).replace("\n", ","),
+                 np.array_str(self.output_counts).replace("\n", ","))
+
 def pf_prior():
     """
     Make Bayes HMM prior for particle filter.
     """
     return ParticlePrior()
+
+def pf_init_weights(prior):
+    """
+    Initialize weights based on prior.
+    """
+        
 
 def pf_trans_sample(prev_particle, prior):
     """
