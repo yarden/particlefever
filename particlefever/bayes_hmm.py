@@ -359,7 +359,7 @@ def cond_out_mat(outputs,
     return distributions.DirichletMatrix(updated_mat)
 
 ##
-## particle filter related classes and conditional distributions
+## Particle filter related classes and conditional distributions
 ##
 class ParticlePrior:
     """
