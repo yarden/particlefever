@@ -17,7 +17,6 @@ class ParticleFilter(object):
     Particle filter.
     """
     def __init__(self, prior, trans_func, observe_func,
-                 init_weights_func,
                  num_particles=500):
         """
         Args:
@@ -25,7 +24,6 @@ class ParticleFilter(object):
         - prior: prior object
         - trans_func: transition distribution function
         - observe_func: observation distribution function
-        - init_weights_func: initialize weights function
         """
         self.prior = prior
         self.trans_func = trans_func
@@ -41,11 +39,7 @@ class ParticleFilter(object):
         """
         Initialize particle using prior.
         """
-        self.particles = self.prior.initialize(self.num_particles)
-        self.weights = self.init_weights_func
-        print "initial particles: "
-        print map(str, self.particles)
-        print "==" * 5
+        self.particles, self.weights = self.prior.initialize(self.num_particles)
 
     def sample_trans(self, num_trans=1):
         """
