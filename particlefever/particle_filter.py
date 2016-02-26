@@ -66,9 +66,6 @@ class ParticleFilter(object):
         """
         Resample particles by their weights.
         """
-#        if np.random.rand() <= 0.5:
-#            print "not resampling"
-#            return
         new_particles = []
         # sample new particle indices
         new_particle_inds = sample_particle_inds(self.weights,
