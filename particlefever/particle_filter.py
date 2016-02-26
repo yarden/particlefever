@@ -66,6 +66,9 @@ class ParticleFilter(object):
         """
         Resample particles by their weights.
         """
+        if np.random.rand() <= 0.7:
+            print "NOT REASMPLING"
+            return
         new_particles = []
         # sample new particle indices
         new_particle_inds = sample_particle_inds(self.weights,
@@ -135,8 +138,7 @@ class DiscreteBayesHMM_PF(ParticleFilter):
                                                         self.prior)
                 output_probs[n, sampled_output] += 1
             output_probs[n, :] /= float(self.num_particles)
-            print "output probs for prediction %d" %(n)
-            print output_probs
+        return output_probs
 
     def __str__(self):
         return "DiscreteBayesHMM_PF(num_particles=%d)" %(self.num_particles)

@@ -221,13 +221,15 @@ class TestDiscreteBayesHMM(unittest.TestCase):
                                                      num_outputs,
                                                      num_particles=num_particles)
         hmm_pf.initialize()
-        data = np.array([0, 1] * 50)
+        data = np.array([0, 1] * 10)
         #data = np.array([0, 0] * 50)
         print "HMM PF: "
         print hmm_pf
         hmm_pf.process_data(data)
         num_preds = 10
-        hmm_pf.predict_output(num_preds)
+        predicted_outputs = hmm_pf.predict_output(num_preds)
+        print "predicted outputs: "
+        print predicted_outputs
 
     def test_score_hidden_state_trajectory(self):
         """
