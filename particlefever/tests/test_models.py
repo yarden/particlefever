@@ -234,16 +234,21 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         # check that we've learned a cyclic posterior
         # for the first few predicted time steps
         t1_prob = predicted_outputs[0, 0]
-        t2_prob = predicted_outputs[0, 1]
-        t3_prob = predicted_outputs[0, 2]
-        t4_prob = predicted_outputs[0, 3]
-        assert ((t1_prob >= 0.8) and (t2_prob <= 0.2) & \
-                (t3_prob >= 0.7) and (t3_prob <= 0.4)), \
+        t2_prob = predicted_outputs[1, 0]
+        t3_prob = predicted_outputs[2, 0]
+        t4_prob = predicted_outputs[3, 0]
+        assert ((t1_prob >= 0.8) and (t2_prob <= 0.2) and \
+                (t3_prob >= 0.7) and (t4_prob <= 0.4)), \
              "Not seeing peaky periodic posterior."
-        # check that the effect washes out by the end
-        last_probs = predicted_outputs[predicted_outputs.shape[0] - 5:, 0]
-        print "last probs: "
-        print last_probs
+        # check that the effect washes out to be roughly random
+        # by the end of the predictions
+        num_end_obs = 5
+        last_probs = \
+          predicted_outputs[predicted_outputs.shape[0] - num_end_obs:, 0]
+        diff_thresh = 0.15
+        assert ((abs(last_probs - 0.5) <= diff_thresh).all()), \
+          "Last of the %d observations not close enough to 0.5" \
+          %(num_end_obs)
         
 
     def test_score_hidden_state_trajectory(self):
