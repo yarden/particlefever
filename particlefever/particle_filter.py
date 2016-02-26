@@ -104,42 +104,39 @@ class DiscreteBayesHMM_PF(ParticleFilter):
                                                   bayes_hmm.pf_observe,
                                                   num_particles=num_particles)
 
-    def predict_output(self, num_outputs=1):
+    def predict_output(self, num_preds):
         """
         Predict output given current set of particles.
         """
         possible_outputs = np.arange(self.num_outputs)
-        output_probs = np.zeros(self.num_outputs)
-        # first predict transition of particles to new hidden
-        # state
-        new_particles = []
-        for prev_particle in self.particles:
-            particle = bayes_hmm.pf_trans_sample(prev_particle, self.prior)
-            new_particles.append(particle)
-        # now resample the particles
-        print "PARTICLES BEFORE: "
-        for p in self.particles:
-            print str(p)
-        self.particles = new_particles
-        self.resample()
-        print "particles after: "
-        for p in self.particles:
-            print str(p)
-        # then sample an output from each particle and take
-        # the average
+        output_probs = np.zeros((num_preds, self.num_outputs))
         out_mat_hyperparams = self.prior.hmm.out_mat_hyperparams
-        for curr_particle in self.particles:
-            hidden_state = curr_particle.hidden_state
-            pred_dist = \
-              distributions.DirMultinomial(particle.output_counts[hidden_state, :],
-                                           out_mat_hyperparams[hidden_state, :])
-            sampled_output = pred_dist.sample_posterior_pred()
-            print "sampled output: ", sampled_output
-            output_probs[sampled_output] += 1
-        output_probs /= float(self.num_particles)
-        print "output probs: "
-        print output_probs
-            
+        for n in xrange(num_preds):
+            # first predict transition of particles to new hidden
+            # state
+            new_particles = []
+            for prev_particle in self.particles:
+                particle = bayes_hmm.pf_trans_sample(prev_particle, self.prior)
+                new_particles.append(particle)
+            self.particles = new_particles
+            # resample particles
+            self.resample()
+            # then sample an output from each particle and take
+            # the average
+            for p in xrange(self.num_particles):
+                curr_particle = self.particles[p]
+                hidden_state = curr_particle.hidden_state
+                pred_dist = \
+                  distributions.DirMultinomial(particle.output_counts[hidden_state, :],
+                                               out_mat_hyperparams[hidden_state, :])
+                sampled_output = pred_dist.sample_posterior_pred()
+                self.weights[p] *= bayes_hmm.pf_observe(sampled_output,
+                                                        curr_particle,
+                                                        self.prior)
+                output_probs[n, sampled_output] += 1
+            output_probs[n, :] /= float(self.num_particles)
+            print "output probs for prediction %d" %(n)
+            print output_probs
 
     def __str__(self):
         return "DiscreteBayesHMM_PF(num_particles=%d)" %(self.num_particles)

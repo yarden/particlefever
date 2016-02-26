@@ -111,7 +111,6 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         trans_mat_hyperparams *= 1.
         out_mat_hyperparams = np.ones((2, 2))
         out_mat_hyperparams *= 1.
-        
         hmm1 = copy.deepcopy(self.simple_hmm)
         hmm1.trans_mat_hyperparams = trans_mat_hyperparams
         hmm1.out_mat_hyperparams = out_mat_hyperparams
@@ -227,7 +226,8 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         print "HMM PF: "
         print hmm_pf
         hmm_pf.process_data(data)
-        hmm_pf.predict_output()
+        num_preds = 5
+        hmm_pf.predict_output(num_preds)
 
     def test_score_hidden_state_trajectory(self):
         """
