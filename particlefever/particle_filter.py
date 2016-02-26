@@ -75,7 +75,6 @@ class ParticleFilter(object):
         # save new particles
         self.particles = new_particles
         # reset weights to be equal
-        print "resetting weights to be equal"
         self.weights = np.ones(self.num_particles) / self.num_particles
 
     def process_data(self, data):

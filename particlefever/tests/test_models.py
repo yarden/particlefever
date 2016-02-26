@@ -218,13 +218,12 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         print "----"
         #np.random.seed(50)
         #np.random.seed(30)
-        np.random.seed(3)
+        #np.random.seed(3)
         hmm_pf = particle_filter.DiscreteBayesHMM_PF(num_hidden_states,
                                                      num_outputs,
                                                      num_particles=num_particles)
         hmm_pf.initialize()
         data = np.array([0, 1] * 10)
-        #data = np.array([0, 0] * 50)
         print "HMM PF: "
         print hmm_pf
         hmm_pf.process_data(data)
@@ -232,6 +231,20 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         predicted_outputs = hmm_pf.predict_output(num_preds)
         print "predicted outputs: "
         print predicted_outputs
+        # check that we've learned a cyclic posterior
+        # for the first few predicted time steps
+        t1_prob = predicted_outputs[0, 0]
+        t2_prob = predicted_outputs[0, 1]
+        t3_prob = predicted_outputs[0, 2]
+        t4_prob = predicted_outputs[0, 3]
+        assert ((t1_prob >= 0.8) and (t2_prob <= 0.2) & \
+                (t3_prob >= 0.7) and (t3_prob <= 0.4)), \
+             "Not seeing peaky periodic posterior."
+        # check that the effect washes out by the end
+        last_probs = predicted_outputs[predicted_outputs.shape[0] - 5:, 0]
+        print "last probs: "
+        print last_probs
+        
 
     def test_score_hidden_state_trajectory(self):
         """

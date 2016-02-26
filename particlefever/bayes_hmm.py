@@ -59,7 +59,7 @@ class DiscreteBayesHMM:
         # default prior hyperparameters for transition and output
         # matrix
         self.default_trans_mat_hyperparam = 1.
-        self.default_out_mat_hyperparam = 0.5
+        self.default_out_mat_hyperparam = 1.
         # initialize priors if none given
         self.trans_mat_hyperparams = trans_mat_hyperparams
         if self.trans_mat_hyperparams is None:
@@ -376,7 +376,8 @@ class ParticlePrior:
         weights = np.zeros(num_particles)
         for n in xrange(num_particles):
             # use the initial state hyperparameters 
-            init_state_probs = np.random.dirichlet(self.hmm.init_state_hyperparams)
+            init_state_probs = \
+              np.random.dirichlet(self.hmm.init_state_hyperparams)
             # initialize hidden state
             hidden_state = np.random.multinomial(1, init_state_probs).argmax()
             # weigh particle by its prior probability
