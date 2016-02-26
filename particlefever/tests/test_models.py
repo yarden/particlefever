@@ -216,17 +216,18 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         num_particles = 500
         print "\nsetting seed!"
         print "----"
-        np.random.seed(50)
+        #np.random.seed(50)
+        np.random.seed(30)
         hmm_pf = particle_filter.DiscreteBayesHMM_PF(num_hidden_states,
                                                      num_outputs,
                                                      num_particles=num_particles)
         hmm_pf.initialize()
-        data = np.array([0, 1] * 10)
+        data = np.array([0, 1] * 20)
         #data = np.array([0, 0] * 50)
         print "HMM PF: "
         print hmm_pf
         hmm_pf.process_data(data)
-        num_preds = 10
+        num_preds = 50
         predicted_outputs = hmm_pf.predict_output(num_preds)
         print "predicted outputs: "
         print predicted_outputs

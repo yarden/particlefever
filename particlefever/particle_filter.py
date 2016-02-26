@@ -66,9 +66,6 @@ class ParticleFilter(object):
         """
         Resample particles by their weights.
         """
-        if np.random.rand() <= 0.7:
-            print "NOT REASMPLING"
-            return
         new_particles = []
         # sample new particle indices
         new_particle_inds = sample_particle_inds(self.weights,
@@ -77,6 +74,9 @@ class ParticleFilter(object):
             new_particles.append(self.particles[new_particle_inds[n]])
         # save new particles
         self.particles = new_particles
+        # reset weights to be equal
+        print "resetting weights to be equal"
+        self.weights = np.ones(self.num_particles) / self.num_particles
 
     def process_data(self, data):
         if len(self.particles) == 0:
@@ -114,6 +114,8 @@ class DiscreteBayesHMM_PF(ParticleFilter):
         possible_outputs = np.arange(self.num_outputs)
         output_probs = np.zeros((num_preds, self.num_outputs))
         out_mat_hyperparams = self.prior.hmm.out_mat_hyperparams
+        # resample particles before making predictions
+        self.resample()
         for n in xrange(num_preds):
             # first predict transition of particles to new hidden
             # state
@@ -122,22 +124,22 @@ class DiscreteBayesHMM_PF(ParticleFilter):
                 particle = bayes_hmm.pf_trans_sample(prev_particle, self.prior)
                 new_particles.append(particle)
             self.particles = new_particles
-            # resample particles
-            self.resample()
-            # then sample an output from each particle and take
-            # the average
+            # then sample an output from each particle and then
+            # reweight it by the evidence
             for p in xrange(self.num_particles):
                 curr_particle = self.particles[p]
                 hidden_state = curr_particle.hidden_state
                 pred_dist = \
-                  distributions.DirMultinomial(particle.output_counts[hidden_state, :],
+                  distributions.DirMultinomial(curr_particle.output_counts[hidden_state, :],
                                                out_mat_hyperparams[hidden_state, :])
                 sampled_output = pred_dist.sample_posterior_pred()
                 self.weights[p] *= bayes_hmm.pf_observe(sampled_output,
                                                         curr_particle,
                                                         self.prior)
-                output_probs[n, sampled_output] += 1
-            output_probs[n, :] /= float(self.num_particles)
+                output_probs[n, sampled_output] += self.weights[p]
+            output_probs[n, :] /= self.weights.sum()
+            # resample new particles by their weights
+            #self.resample()
         return output_probs
 
     def __str__(self):
