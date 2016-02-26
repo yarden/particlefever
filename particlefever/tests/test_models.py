@@ -226,7 +226,7 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         print "HMM PF: "
         print hmm_pf
         hmm_pf.process_data(data)
-        num_preds = 5
+        num_preds = 10
         hmm_pf.predict_output(num_preds)
 
     def test_score_hidden_state_trajectory(self):
