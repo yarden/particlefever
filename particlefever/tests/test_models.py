@@ -206,13 +206,12 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         gibbs_obj = sampler.DiscreteBayesHMMGibbs(hmm_obj)
         gibbs_obj.sample(data, init_hidden_states=False)
         mean_preds = self.get_mean_preds(gibbs_obj.samples)
-        print "predicting using sampled HMM"
-        print "mean preds: ", mean_preds
 
     def test_hmm_particle_filter(self):
         """
         Test particle filter.
         """
+        print "testing HMM particle filter..."
         num_hidden_states = 2
         num_outputs = 2
         num_particles = 500
@@ -228,7 +227,6 @@ class TestDiscreteBayesHMM(unittest.TestCase):
         print "HMM PF: "
         print hmm_pf
         hmm_pf.process_data(data)
-        print "predicting output..."
         hmm_pf.predict_output()
 
     def test_score_hidden_state_trajectory(self):
