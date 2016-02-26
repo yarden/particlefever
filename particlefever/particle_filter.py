@@ -55,7 +55,6 @@ class ParticleFilter(object):
         norm_factor = 0.
         for n in xrange(self.num_particles):
             # weights updated multiplicatively
-#            print "weights: ", self.weights
             self.weights[n] *= self.observe_func(data_point,
                                                  self.particles[n],
                                                  self.prior)
@@ -67,12 +66,15 @@ class ParticleFilter(object):
         """
         Resample particles by their weights.
         """
+#        if np.random.rand() <= 0.5:
+#            print "not resampling"
+#            return
         new_particles = []
         # sample new particle indices
         new_particle_inds = sample_particle_inds(self.weights,
                                                  self.num_particles)
         for n in xrange(self.num_particles):
-            new_particles.append(self.particles[n])
+            new_particles.append(self.particles[new_particle_inds[n]])
         # save new particles
         self.particles = new_particles
 
@@ -117,11 +119,19 @@ class DiscreteBayesHMM_PF(ParticleFilter):
         for prev_particle in self.particles:
             particle = bayes_hmm.pf_trans_sample(prev_particle, self.prior)
             new_particles.append(particle)
+        # now resample the particles
+        print "PARTICLES BEFORE: "
+        for p in self.particles:
+            print str(p)
+        self.particles = new_particles
+        self.resample()
+        print "particles after: "
+        for p in self.particles:
+            print str(p)
         # then sample an output from each particle and take
         # the average
         out_mat_hyperparams = self.prior.hmm.out_mat_hyperparams
-        
-        for curr_particle in new_particles:
+        for curr_particle in self.particles:
             hidden_state = curr_particle.hidden_state
             pred_dist = \
               distributions.DirMultinomial(particle.output_counts[hidden_state, :],
