@@ -527,6 +527,119 @@ def sample_out_trans_mats(outputs,
                                   out_trans_mat_hyperparams[out_val, :])
     return sampled_out_trans_mats
 
+
+##
+## Particle filter related classes and conditional distributions
+##
+class ParticlePrior:
+    """
+    Prior for discrete switching SSM.
+    """
+    def __init__(self, num_hidden_states, num_outputs):
+        self.ssm = DiscreteSwitchSSM(num_hidden_states, num_outputs)
+
+    def initialize(self, num_particles):
+        """
+        Initialize set of particles.
+        """
+        particles = []
+        weights = np.zeros(num_particles)
+        for n in xrange(num_particles):
+            # use the initial state hyperparameters 
+            init_state_probs = np.random.dirichlet(self.ssm.init_state_hyperparams)
+            # initialize hidden state
+            ### FOR INITIAL PARTICLE, there's no previous switch state!
+            #prev_switch_state = np.random.multinomial(1, init_state_probs).argmax()
+            prev_switch_state = None
+            # weigh particle by its prior probability
+            weights[n] = init_state_probs[hidden_state]
+            # initialize particle with hidden state
+            init_switch_trans_mat = \
+              np.zeros(self.ssm.switch_trans_mat_hyperparams.shape)
+            init_out_trans_mat = np.zeros(self.ssm.out_trans_mat_hyperparams.shape)
+            particle = Particle(prev_switch_state,
+                                init_trans_mat,
+                                init_out_mat)
+            particles.append(particle)
+        return particles, weights
+
+class Particle:
+    """
+    Particle for discrete switching SSM.
+    """
+    def __init__(self, prev_switch_state, switch_trans_counts, out_trans_counts):
+        """
+        Args:
+        -----
+          - prev_switch_state: switch state (hidden) of previous state
+          - switch_trans_counts: matrix of counts for switch state transitions
+          - out_trans_counts: matrix of K x O x O where K is number of switch
+            states and O is number of outputs
+        """
+        # switch state
+        self.prev_switch_state = prev_switch_state
+        # counters for hidden state transitions and outputs
+        self.switch_trans_counts = switch_trans_counts
+        self.out_trans_counts = out_trans_counts
+        self.output_counts = output_counts
+
+    def __str__(self):
+        return "DiscSwitchSSMParticle(prev_switch_state=%s; " \
+               "switch_trans_counts=%s, out_trans_counts=%s)" \
+               %(str(self.prev_switch_state),
+                 np.array_str(self.switch_trans_counts).replace("\n", ","),
+                 np.array_str(self.out_trans_counts).replace("\n", ","))
+
+def pf_prior():
+    """
+    Make discrete switching SSM prior for particle filter.
+    """
+    return ParticlePrior()
+
+def pf_trans_sample(prev_particle, prior):
+    """
+    Sample transition to new particle given previous particle.
+    """
+    # sample transition to new particle using posterior predictive
+    # dirichlet distribution
+    new_particle = copy.deepcopy(prev_particle)
+    # get the relevant counts for the switch state
+    prev_counts = \
+      prev_particle.switch_trans_counts[prev_particle.switch_state, :]
+    # prior counts for the each of the possible switch state
+    # given the previous switch state
+    switch_state_prior_counts = \
+      prior.ssm.switch_trans_mat_hyperparams[prev_particle.switch_state, :]
+    log_scores = np.log(prev_counts + switch_state_prior_counts)
+    if (log_scores == -np.inf).any():
+        print "WARNING: transition probability to new particle contained -inf"
+    # sample new switch state
+    next_state_dist = distributions.DirMultinomial(prev_counts,
+                                                   switch_state_prior_counts)
+    new_particle.switch_state = next_state_dist.sample_posterior_pred()
+    # update the particle's state transition count
+    new_particle.switch_trans_counts[prev_particle.switch_state,
+                                     new_particle.switch_state] += 1
+    return new_particle
+    
+def pf_observe(data_point, particle, prior):
+    """
+    Evaluate P(output | particle) (i.e. P(obs | S)).
+    Returns:
+      - weight for this data point given its particle.
+    """
+    out_prior_counts = prior.hmm.out_mat_hyperparams[particle.hidden_state, :]
+    # weigh the particle by its probability
+    out_dist = \
+      distributions.DirMultinomial(particle.output_counts[particle.hidden_state, :],
+                                   out_prior_counts)
+    weight = out_dist.posterior_pred_pmf(data_point)
+    # update the particle counts
+    particle.output_counts[particle.hidden_state, data_point] += 1
+    return weight
+
+
 ##
 ## scoring functions
 ##
+# ...
