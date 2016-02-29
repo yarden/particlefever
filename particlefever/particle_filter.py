@@ -4,6 +4,7 @@
 import os
 import sys
 import time
+import copy
 
 import numpy as np
 
@@ -11,6 +12,8 @@ import particlefever
 import particlefever.switch_ssm as switch_ssm
 import particlefever.bayes_hmm as bayes_hmm
 import particlefever.distributions as distributions
+
+from collections import OrderedDict
 
 class ParticleFilter(object):
     """
@@ -171,10 +174,14 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
         # renormalize weights
         self.weights /= norm_factor
 
-    def process_data(self, data):
+    def process_data(self, data, save_steps=True):
+        """
+        Filter through data (without storing particles at each time step.)
+        """
         if len(self.particles) == 0:
             raise Exception, "Must initialize particles first."
         prev_output = None
+        self.filter_results = OrderedDict()
         for n in xrange(data.shape[0]):
             if n > 0:
                 # record previous data point if we're not
@@ -186,24 +193,41 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
             self.reweight(data[n], prev_output=prev_output)
             # sample new particles
             self.resample()
+            if save_steps:
+                self.filter_results[n] = copy.deepcopy(self.particles)
         print "particles at end: "
         print "--" * 5
         for n in xrange(self.num_particles):
             print self.particles[n], " weight: ", self.weights[n]
-        
+
     def predict_output(self, num_preds, prev_output):
         """
         Predict output given current set of particles.
         """
-        possible_outputs = np.arange(self.num_outputs)
         output_probs = np.zeros((num_preds, self.num_outputs))
         out_trans_mat_hyperparams = self.prior.ssm.out_trans_mat_hyperparams
         # resample particles before making predictions
         self.resample()
         # record previous outputs for each particle
-        # at first time step, the previous output is determined by
-        # the data
-        particle_prev_outputs = np.ones(self.num_particles) * prev_output
+        particle_prev_outputs = np.ones(self.num_particles)
+        if prev_output is not None:
+            # at first time step, the previous output is determined by
+            # the data, assuming we had observed any data
+            particle_prev_outputs *= prev_output
+        else:
+            # special case where there's no previous output
+            # in this case, draw outputs from initialized
+            # particles. draw as many samples from prior as there
+            # are particles
+            for n in xrange(self.num_particles):
+                prev_counts = np.zeros(self.num_outputs)
+                init_out_hyperparams = self.prior.ssm.init_out_hyperparams
+                pred_dist = \
+                  distributions.DirMultinomial(prev_counts, init_out_hyperparams)
+                sampled_output = pred_dist.sample_posterior_pred()
+                particle_prev_outputs[n] = sampled_output
+                output_probs[0, sampled_output] += 1
+            output_probs = output_probs / float(self.num_particles)
         for n in xrange(num_preds):
             # first predict transition of particles to new switch state
             new_particles = []
@@ -231,6 +255,29 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                 particle_prev_outputs[p] = sampled_output
             output_probs[n, :] /= self.weights.sum()
         return output_probs
+
+    def get_prediction_probs(self, lag=1):
+        """
+        Get prediction probabilities for a set of observations
+        assuming a lag of 1 by default.
+        """
+        num_outputs = self.num_outputs
+        num_obs = len(self.filter_results)
+        if num_obs == 0:
+            raise Exception, "No filtering posteriors found."
+        prediction_probs = np.zeros((num_obs, num_outputs))
+        for k in xrange(num_obs):
+            # need to add 1 here to k to get 1-based time
+            # for lag computation
+            if (k + 1 - lag) <= 0:
+                posterior = self.filter_results[0][0, :]
+            else:
+                # also need to add 1 here to k to get 1-based time
+                # for lag computation
+                posterior = self.filter_results[k + 1 - lag][0, :]
+            # here don't add 1 to k; we're storing 0-based time
+            prediction_probs[k, :] = posterior
+        return prediction_probs
 
     def __str__(self):
         return "DiscreteSwitchSSM_PF(num_particles=%d)" %(self.num_particles)
