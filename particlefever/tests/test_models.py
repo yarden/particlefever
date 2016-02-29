@@ -51,7 +51,6 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
 
     def test_ssm_particle_filter(self):
         print "testing particle filter"
-        data = np.array([0, 1] * 10)
         ssm = copy.deepcopy(self.simple_ssm)
         num_switch_states = 2
         num_outputs = 2
@@ -62,7 +61,8 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         print "SSM PF: "
         print ssm_pf
         ssm_pf.initialize()
-        data = np.array([0, 1] * 10)
+        #data = np.array([0, 1] * 10)
+        data = np.array([0, 1] * 10 + [0, 0] * 10)
         ssm_pf.process_data(data)
         print "testing predictions: "
         num_preds = 10
