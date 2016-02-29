@@ -149,8 +149,17 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
     """
     Particle filter for discrete switching state-space model.
     """
-    pass
+    def __init__(self, num_switch_states, num_outputs, num_particles=200):
+        self.num_switch_states = num_switch_states
+        self.num_outputs = num_outputs
+        prior = switch_ssm.ParticlePrior(num_switch_states, num_outputs)
+        super(DiscreteSwitchSSM_PF, self).__init__(prior,
+                                                   switch_ssm.pf_trans_sample,
+                                                   switch_ssm.pf_observe,
+                                                   num_particles=num_particles)
 
+    def __str__(self):
+        return "DiscreteSwitchSSM_PF(num_particles=%d)" %(self.num_particles)
 
 ##
 ## helper functions for particle filter

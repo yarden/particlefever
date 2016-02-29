@@ -40,14 +40,30 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         print "predicting next %d obs: " %(num_preds)
         print pred_probs
 
-    def test_filter_fit(self):
-        print "testing filter fitting"
+    def _test_filter_fit(self):
+        print "testing filter fitting with Gibbs"
         data = np.array([0, 1] * 10)
         ssm = copy.deepcopy(self.simple_ssm)
         gibbs_obj = sampler.DiscreteSwitchSSMGibbs(ssm)
         gibbs_obj.filter_fit(ssm, data, switch_ssm.get_predictions,
                              num_iters=2000, burn_in=100)
         print gibbs_obj.get_prediction_probs(num_outputs=ssm.num_outputs)
+
+    def test_ssm_particle_filter(self):
+        print "testing particle filter"
+        data = np.array([0, 1] * 10)
+        ssm = copy.deepcopy(self.simple_ssm)
+        num_switch_states = 2
+        num_outputs = 2
+        num_particles = 200
+        ssm_pf = particle_filter.DiscreteSwitchSSM_PF(num_switch_states,
+                                                      num_outputs,
+                                                      num_particles=num_particles)
+        print "SSM PF: "
+        print ssm_pf
+        ssm_pf.initialize()
+        data = np.array([0, 1] * 10)
+        ssm_pf.process_data(data)
         
 
 class TestDiscreteBayesHMM(unittest.TestCase):
