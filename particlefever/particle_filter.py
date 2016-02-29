@@ -194,7 +194,10 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
             # sample new particles
             self.resample()
             if save_steps:
-                self.filter_results[n] = copy.deepcopy(self.particles)
+                # save particles and their weights
+                self.filter_results[n] = \
+                  {"particles": copy.deepcopy(self.particles),
+                   "weights": copy.deepcopy(self.weights)}
         print "particles at end: "
         print "--" * 5
         for n in xrange(self.num_particles):
@@ -202,14 +205,15 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
 
     def predict_output(self, num_preds, prev_output):
         """
-        Predict output given current set of particles.
+        Predict output for number of given time steps, given
+        previous output (if any).
         """
         output_probs = np.zeros((num_preds, self.num_outputs))
         out_trans_mat_hyperparams = self.prior.ssm.out_trans_mat_hyperparams
         # resample particles before making predictions
         self.resample()
         # record previous outputs for each particle
-        particle_prev_outputs = np.ones(self.num_particles)
+        particle_prev_outputs = np.ones(num_particles)
         if prev_output is not None:
             # at first time step, the previous output is determined by
             # the data, assuming we had observed any data
@@ -219,7 +223,7 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
             # in this case, draw outputs from initialized
             # particles. draw as many samples from prior as there
             # are particles
-            for n in xrange(self.num_particles):
+            for n in xrange(num_particles):
                 prev_counts = np.zeros(self.num_outputs)
                 init_out_hyperparams = self.prior.ssm.init_out_hyperparams
                 pred_dist = \
@@ -256,7 +260,7 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
             output_probs[n, :] /= self.weights.sum()
         return output_probs
 
-    def get_prediction_probs(self, lag=1):
+    def prediction_with_lag(self, lag=1):
         """
         Get prediction probabilities for a set of observations
         assuming a lag of 1 by default.
@@ -266,17 +270,35 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
         if num_obs == 0:
             raise Exception, "No filtering posteriors found."
         prediction_probs = np.zeros((num_obs, num_outputs))
+        print "FILTER RESULTS: "
         for k in xrange(num_obs):
             # need to add 1 here to k to get 1-based time
             # for lag computation
             if (k + 1 - lag) <= 0:
-                posterior = self.filter_results[0][0, :]
+                posterior = self.filter_results[0]
             else:
                 # also need to add 1 here to k to get 1-based time
                 # for lag computation
-                posterior = self.filter_results[k + 1 - lag][0, :]
+                posterior = self.filter_results[k + 1 - lag]
+            ###
+            ### TODO: here add code to predict remaining
+            ### observations using current set of particles, without
+            ### adversely affecting the state of the object, i.e.
+            ### self.particles or self.weights. Perhaps project forward
+            ### then restore them to what they were at this time point.
+            ###
+            # predict remaining observations using current
+            # set of particles
+            num_preds = num_obs - k
+            print "predicting rest of %d time points" %(num_preds)
+            print "  - curr t: %d" %(k)
+            self.particles = posterior["particles"]
+            self.weights = posterior["weights"]
+            predictions = self.predict_output(num_preds,
+                                              prev_output)
+            print "predictions: ", predictions
             # here don't add 1 to k; we're storing 0-based time
-            prediction_probs[k, :] = posterior
+            prediction_probs[k, :] = predictions
         return prediction_probs
 
     def __str__(self):
