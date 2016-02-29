@@ -137,8 +137,6 @@ class DiscreteBayesHMM_PF(ParticleFilter):
                                                         self.prior)
                 output_probs[n, sampled_output] += self.weights[p]
             output_probs[n, :] /= self.weights.sum()
-            # resample new particles by their weights
-            #self.resample()
         return output_probs
 
     def __str__(self):
@@ -193,6 +191,46 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
         for n in xrange(self.num_particles):
             print self.particles[n], " weight: ", self.weights[n]
         
+    def predict_output(self, num_preds, prev_output):
+        """
+        Predict output given current set of particles.
+        """
+        possible_outputs = np.arange(self.num_outputs)
+        output_probs = np.zeros((num_preds, self.num_outputs))
+        out_trans_mat_hyperparams = self.prior.ssm.out_trans_mat_hyperparams
+        # resample particles before making predictions
+        self.resample()
+        # record previous outputs for each particle
+        # at first time step, the previous output is determined by
+        # the data
+        particle_prev_outputs = np.ones(self.num_particles) * prev_output
+        for n in xrange(num_preds):
+            # first predict transition of particles to new switch state
+            new_particles = []
+            for prev_particle in self.particles:
+                particle = switch_ssm.pf_trans_sample(prev_particle, self.prior)
+                new_particles.append(particle)
+            self.particles = new_particles
+            # then sample an output from each particle and then
+            # reweight it by the evidence
+            for p in xrange(self.num_particles):
+                prev_output = particle_prev_outputs[p]
+                curr_particle = self.particles[p]
+                switch_state = curr_particle.switch_state
+                pred_dist = \
+                  distributions.DirMultinomial(curr_particle.out_trans_counts[switch_state,
+                                                                              prev_output, :],
+                                               out_trans_mat_hyperparams[prev_output, :])
+                sampled_output = pred_dist.sample_posterior_pred()
+                self.weights[p] *= switch_ssm.pf_observe(sampled_output,
+                                                         curr_particle,
+                                                         self.prior,
+                                                         prev_output=prev_output)
+                output_probs[n, sampled_output] += self.weights[p]
+                # update previous output
+                particle_prev_outputs[p] = sampled_output
+            output_probs[n, :] /= self.weights.sum()
+        return output_probs
 
     def __str__(self):
         return "DiscreteSwitchSSM_PF(num_particles=%d)" %(self.num_particles)

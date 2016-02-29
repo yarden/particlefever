@@ -62,7 +62,7 @@ class DiscreteSwitchSSM:
         # make default switch transition matrix
         if self.switch_trans_mat_hyperparams is None:
             self.switch_trans_mat_hyperparams = np.ones((self.num_switch_states,
-                                                     self.num_switch_states))
+                                                         self.num_switch_states))
             self.switch_trans_mat_hyperparams *= self.default_trans_mat_hyperparam
         # incorporate sticky prior weight on sticky transition matrix
         self.sticky_switch_weight = sticky_switch_weight
