@@ -64,6 +64,12 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         ssm_pf.initialize()
         data = np.array([0, 1] * 10)
         ssm_pf.process_data(data)
+        print "testing predictions: "
+        num_preds = 10
+        prev_output = data[-1]
+        pred_probs = ssm_pf.predict_output(num_preds, prev_output)
+        print "prediction probs: "
+        print pred_probs
         
 
 class TestDiscreteBayesHMM(unittest.TestCase):
