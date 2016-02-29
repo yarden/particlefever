@@ -82,7 +82,7 @@ class ParticleFilter(object):
             raise Exception, "Must initialize particles first."
         for n in xrange(data.shape[0]):
             # sample new transitions
-            self.sample_trans(data[n])
+            self.sample_trans()
             # correct sampled transitions based on observations
             self.reweight(data[n])
             # sample new particles
@@ -158,7 +158,7 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                                                    switch_ssm.pf_observe,
                                                    num_particles=num_particles)
 
-    def reweight(self, data_point, prev_data_point):
+    def reweight(self, data_point, prev_output):
         """
         Reweight particles according to evidence, P(e | S).
         """
@@ -168,7 +168,7 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
             self.weights[n] *= self.observe_func(data_point,
                                                  self.particles[n],
                                                  self.prior,
-                                                 prev_data_point=prev_data_point)
+                                                 prev_output=prev_output)
             norm_factor += self.weights[n]
         # renormalize weights
         self.weights /= norm_factor
@@ -176,14 +176,16 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
     def process_data(self, data):
         if len(self.particles) == 0:
             raise Exception, "Must initialize particles first."
-        prev_data_point = None
+        prev_output = None
         for n in xrange(data.shape[0]):
             if n > 0:
-                prev_data_point = data[n - 1]
+                # record previous data point if we're not
+                # in the first time step
+                prev_output = data[n - 1]
             # sample new transitions
-            self.sample_trans(data[n])
+            self.sample_trans()
             # correct sampled transitions based on observations
-            self.reweight(data[n], prev_data_point)
+            self.reweight(data[n], prev_output=prev_output)
             # sample new particles
             self.resample()
         print "particles at end: "

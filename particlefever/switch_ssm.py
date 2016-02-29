@@ -558,14 +558,8 @@ class ParticlePrior:
             init_out_trans_mat = np.zeros((self.ssm.num_switch_states,
                                            self.ssm.num_outputs,
                                            self.ssm.num_outputs))
-            # determine weight of the particles by the prior on the
-            # observations
-            prior_out_dist = \
-              distributions.DirMultinomial(np.zeros(self.ssm.num_outputs),
-                                           self.ssm.init_out_hyperparams)
-            weights[n] = prior_out_dist()
+            weights[n] = 1.
             particle = Particle(switch_state,
-                                prev_output_state,
                                 init_switch_trans_mat,
                                 init_out_trans_mat)
             particles.append(particle)
@@ -647,20 +641,19 @@ def pf_observe(data_point, particle, prior, **kwargs):
     ####
     #### TODO: NEED TO REFERENCE PREVIOUS OUTPUT HERE
     ####
-    prev_output_state = kwargs["prev_output_state"]
-    if prev_output_state is None:
+    prev_output = kwargs["prev_output"]
+    if prev_output is None:
         out_trans_counts = np.zeros(prior.ssm.num_outputs)
         # weigh by the prior
         out_dist = distributions.DirMultinomial(out_trans_counts, out_prior_counts)
     else:
         out_trans_counts = \
-          particle.out_trans_counts[particle.switch_state,
-                                    particle.prev_output_state, :]
+          particle.out_trans_counts[particle.switch_state, prev_output, :]
         # weigh the particle by its probability
         out_dist = distributions.DirMultinomial(out_trans_counts, out_prior_counts)
         # update the particle counts
         particle.out_trans_counts[particle.switch_state,
-                                  kwargs["prev_output_state"],
+                                  kwargs["prev_output"],
                                   data_point] += 1
     # calculate weight
     weight = out_dist.posterior_pred_pmf(data_point)
