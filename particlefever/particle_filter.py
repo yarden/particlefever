@@ -197,7 +197,8 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                 # save particles and their weights
                 self.filter_results[n] = \
                   {"particles": copy.deepcopy(self.particles),
-                   "weights": copy.deepcopy(self.weights)}
+                   "weights": copy.deepcopy(self.weights),
+                   "prev_output": prev_output}
         print "particles at end: "
         print "--" * 5
         for n in xrange(self.num_particles):
@@ -208,6 +209,11 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
         Predict output for number of given time steps, given
         previous output (if any).
         """
+        ###
+        ### TODO: might have to fix this function to take
+        ### set of particles and weights as input and non-destructively
+        ### modify them
+        ###
         output_probs = np.zeros((num_preds, self.num_outputs))
         out_trans_mat_hyperparams = self.prior.ssm.out_trans_mat_hyperparams
         # resample particles before making predictions
