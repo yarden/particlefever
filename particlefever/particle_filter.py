@@ -41,7 +41,7 @@ class ParticleFilter(object):
         """
         self.particles, self.weights = self.prior.initialize(self.num_particles)
 
-    def sample_trans(self, num_trans=1):
+    def sample_trans(self):
         """
         Sample transitions for particles.
         """
@@ -157,6 +157,40 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                                                    switch_ssm.pf_trans_sample,
                                                    switch_ssm.pf_observe,
                                                    num_particles=num_particles)
+
+    def reweight(self, data_point, prev_data_point):
+        """
+        Reweight particles according to evidence, P(e | S).
+        """
+        norm_factor = 0.
+        for n in xrange(self.num_particles):
+            # weights updated multiplicatively
+            self.weights[n] *= self.observe_func(data_point,
+                                                 self.particles[n],
+                                                 self.prior,
+                                                 prev_data_point=prev_data_point)
+            norm_factor += self.weights[n]
+        # renormalize weights
+        self.weights /= norm_factor
+
+    def process_data(self, data):
+        if len(self.particles) == 0:
+            raise Exception, "Must initialize particles first."
+        prev_data_point = None
+        for n in xrange(data.shape[0]):
+            if n > 0:
+                prev_data_point = data[n - 1]
+            # sample new transitions
+            self.sample_trans(data[n])
+            # correct sampled transitions based on observations
+            self.reweight(data[n], prev_data_point)
+            # sample new particles
+            self.resample()
+        print "particles at end: "
+        print "--" * 5
+        for n in xrange(self.num_particles):
+            print self.particles[n], " weight: ", self.weights[n]
+        
 
     def __str__(self):
         return "DiscreteSwitchSSM_PF(num_particles=%d)" %(self.num_particles)

@@ -575,8 +575,7 @@ class Particle:
     """
     Particle for discrete switching SSM.
     """
-    def __init__(self, switch_state, prev_output_state,
-                 switch_trans_counts, out_trans_counts):
+    def __init__(self, switch_state, switch_trans_counts, out_trans_counts):
         """
         Args:
         -----
@@ -587,17 +586,14 @@ class Particle:
         """
         # switch state
         self.switch_state = switch_state
-        # previous output
-        self.prev_output_state = prev_output_state
         # counters for hidden state transitions and outputs
         self.switch_trans_counts = switch_trans_counts
         self.out_trans_counts = out_trans_counts
 
     def __str__(self):
-        return "DiscSwitchSSMParticle(switch_state=%s; prev_output_state=%s; " \
+        return "DiscSwitchSSMParticle(switch_state=%s; " \
                "switch_trans_counts=%s, out_trans_counts=%s)" \
                %(str(self.switch_state),
-                 str(self.prev_output_state),
                  np.array_str(self.switch_trans_counts).replace("\n", ","),
                  np.array_str(self.out_trans_counts).replace("\n", ","))
 
@@ -607,8 +603,7 @@ def pf_prior():
     """
     return ParticlePrior()
 
-def pf_trans_sample(prev_particle, prior,
-                    **kwargs):
+def pf_trans_sample(prev_particle, prior):
     """
     Sample transition to new particle given previous particle.
     """
@@ -639,10 +634,9 @@ def pf_trans_sample(prev_particle, prior,
         # update the particle's state transition count
         new_particle.switch_trans_counts[prev_particle.switch_state,
                                          new_particle.switch_state] += 1
-        new_particle.prev_output_state = prev_particle.prev_output_state
     return new_particle
     
-def pf_observe(data_point, particle, prior):
+def pf_observe(data_point, particle, prior, **kwargs):
     """
     Evaluate P(output | particle) (i.e. P(obs | S)).
     Returns:
@@ -653,7 +647,8 @@ def pf_observe(data_point, particle, prior):
     ####
     #### TODO: NEED TO REFERENCE PREVIOUS OUTPUT HERE
     ####
-    if particle.prev_output_state is None:
+    prev_output_state = kwargs["prev_output_state"]
+    if prev_output_state is None:
         out_trans_counts = np.zeros(prior.ssm.num_outputs)
         # weigh by the prior
         out_dist = distributions.DirMultinomial(out_trans_counts, out_prior_counts)
@@ -665,7 +660,7 @@ def pf_observe(data_point, particle, prior):
         out_dist = distributions.DirMultinomial(out_trans_counts, out_prior_counts)
         # update the particle counts
         particle.out_trans_counts[particle.switch_state,
-                                  particle.prev_output_state,
+                                  kwargs["prev_output_state"],
                                   data_point] += 1
     # calculate weight
     weight = out_dist.posterior_pred_pmf(data_point)
