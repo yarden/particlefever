@@ -78,7 +78,7 @@ class ParticleFilter(object):
         # save new particles
         self.particles = new_particles
         # reset weights to be equal
-        self.weights = np.ones(self.num_particles) / self.num_particles
+        self.weights = np.ones(self.num_particles) / self.num_particles 
 
     def process_data(self, data):
         if len(self.particles) == 0:
@@ -140,6 +140,8 @@ class DiscreteBayesHMM_PF(ParticleFilter):
                                                         self.prior)
                 output_probs[n, sampled_output] += self.weights[p]
             output_probs[n, :] /= self.weights.sum()
+            # resample particles
+            self.resample()
         return output_probs
 
     def __str__(self):
@@ -209,35 +211,28 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
         Predict output for number of given time steps, given
         previous output (if any).
         """
-        ###
-        ### TODO: might have to fix this function to take
-        ### set of particles and weights as input and non-destructively
-        ### modify them
-        ###
         output_probs = np.zeros((num_preds, self.num_outputs))
         out_trans_mat_hyperparams = self.prior.ssm.out_trans_mat_hyperparams
         # resample particles before making predictions
         self.resample()
         # record previous outputs for each particle
-        particle_prev_outputs = np.ones(num_particles)
+        particle_prev_outputs = np.ones(self.num_particles)
         if prev_output is not None:
             # at first time step, the previous output is determined by
             # the data, assuming we had observed any data
             particle_prev_outputs *= prev_output
         else:
             # special case where there's no previous output
-            # in this case, draw outputs from initialized
+            # in this case, draw outputs from initial set of 
             # particles. draw as many samples from prior as there
             # are particles
-            for n in xrange(num_particles):
+            for n in xrange(self.num_particles):
                 prev_counts = np.zeros(self.num_outputs)
                 init_out_hyperparams = self.prior.ssm.init_out_hyperparams
                 pred_dist = \
                   distributions.DirMultinomial(prev_counts, init_out_hyperparams)
                 sampled_output = pred_dist.sample_posterior_pred()
                 particle_prev_outputs[n] = sampled_output
-                output_probs[0, sampled_output] += 1
-            output_probs = output_probs / float(self.num_particles)
         for n in xrange(num_preds):
             # first predict transition of particles to new switch state
             new_particles = []
@@ -264,9 +259,11 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                 # update previous output
                 particle_prev_outputs[p] = sampled_output
             output_probs[n, :] /= self.weights.sum()
+            # resample outputs
+            self.resample()
         return output_probs
 
-    def prediction_with_lag(self, lag=1):
+    def prediction_with_lag(self, data, lag=1):
         """
         Get prediction probabilities for a set of observations
         assuming a lag of 1 by default.
@@ -277,15 +274,23 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
             raise Exception, "No filtering posteriors found."
         prediction_probs = np.zeros((num_obs, num_outputs))
         print "FILTER RESULTS: "
+        prev_output = None
+        self.lag_predictions = OrderedDict()
         for k in xrange(num_obs):
             # need to add 1 here to k to get 1-based time
             # for lag computation
-            if (k + 1 - lag) <= 0:
+            time_to_use = k + 1 - lag
+            if time_to_use <= 0:
                 posterior = self.filter_results[0]
             else:
                 # also need to add 1 here to k to get 1-based time
                 # for lag computation
-                posterior = self.filter_results[k + 1 - lag]
+                posterior = self.filter_results[time_to_use]
+                # previous output is the one right before the time point
+                # we used for the computation
+                if (time_to_use - 1) >= 0:
+                    prev_output = data[time_to_use - 1]
+            print "PREVIOUS OUTPUT FOR %d was" %(k), prev_output
             ###
             ### TODO: here add code to predict remaining
             ### observations using current set of particles, without
@@ -298,13 +303,14 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
             num_preds = num_obs - k
             print "predicting rest of %d time points" %(num_preds)
             print "  - curr t: %d" %(k)
-            self.particles = posterior["particles"]
-            self.weights = posterior["weights"]
+            self.particles = copy.deepcopy(posterior["particles"])
+            self.weights = copy.deepcopy(posterior["weights"])
             predictions = self.predict_output(num_preds,
                                               prev_output)
             print "predictions: ", predictions
+            raise Exception, "test"
             # here don't add 1 to k; we're storing 0-based time
-            prediction_probs[k, :] = predictions
+#            prediction_probs[k, :] = predictions[k
         return prediction_probs
 
     def __str__(self):
@@ -328,15 +334,19 @@ def sample_particle_inds(w, n):
     return np.searchsorted(wc, u)
 
 def calc_Neff(w):
-    """
-    Calculate number of effective particles, common metric used to determine
-    when to resample
-    Returns:
-     (float) number of effective particles
-    """
-    tmp = np.exp(w - np.max(w))
-    tmp /= np.sum(tmp)
-    return 1.0 / np.sum(np.square(tmp))
+    num_eff = 1. / np.sum(np.power(w, 2))
+    return num_eff
+
+# def calc_Neff(w):
+#     """
+#     Calculate number of effective particles, common metric used to determine
+#     when to resample
+#     Returns:
+#      (float) number of effective particles
+#     """
+#     tmp = np.exp(w - np.max(w))
+#     tmp /= np.sum(tmp)
+#     return 1.0 / np.sum(np.square(tmp))
 
 
 def main():
