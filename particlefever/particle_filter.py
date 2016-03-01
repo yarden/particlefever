@@ -214,7 +214,10 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
         output_probs = np.zeros((num_preds, self.num_outputs))
         out_trans_mat_hyperparams = self.prior.ssm.out_trans_mat_hyperparams
         # resample particles before making predictions
-        self.resample()
+        #self.resample()
+        print "PREDICTING WITH CURRENT PARTICLES BEING: "
+        for n in range(self.num_particles):
+            print self.particles[n], self.weights[n]
         # record previous outputs for each particle
         particle_prev_outputs = np.ones(self.num_particles)
         if prev_output is not None:
@@ -256,8 +259,10 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                                                          self.prior,
                                                          prev_output=prev_output)
                 output_probs[n, sampled_output] += self.weights[p]
+                print "particle %s predicts" %(str(curr_particle)), " ", sampled_output, " prev output: ", prev_output
                 # update previous output
                 particle_prev_outputs[p] = sampled_output
+            raise Exception, "predicted %d" %(n)
             output_probs[n, :] /= self.weights.sum()
             # resample outputs
             self.resample()

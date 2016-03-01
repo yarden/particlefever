@@ -49,13 +49,11 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
                              num_iters=2000, burn_in=100)
         print gibbs_obj.get_prediction_probs(num_outputs=ssm.num_outputs)
 
-    def test_ssm_particle_filter_prior(self):
+    def _test_ssm_particle_filter_prior(self):
         """
         Test particle filter's prior.
         """
         print "testing particle filter's prior"
-        print "setting SEED"
-        np.random.seed(300)
         ssm = copy.deepcopy(self.simple_ssm)
         num_switch_states = ssm.num_switch_states
         num_outputs = ssm.num_outputs
@@ -73,19 +71,19 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         print "prediction probabilities for %d time steps using prior: " \
               %(num_preds)
         print pred_probs
-        error_thresh = 0.15
+        error_thresh = 0.2
         assert (num_outputs == 2), "This test only makes sense for 2-output SSMs."
         assert (abs(pred_probs[:, 0] - 0.5) <= error_thresh).all(), \
           "Predictions from prior are not close to 0.5."
-        
-        
 
-    def _test_ssm_particle_filter(self):
+    def test_ssm_particle_filter(self):
         print "testing particle filter"
+        print "setting SEED..."
+        np.random.seed(300)
         ssm = copy.deepcopy(self.simple_ssm)
-        num_switch_states = ssm.num_switch_States
+        num_switch_states = ssm.num_switch_states
         num_outputs = ssm.num_outputs
-        num_particles = 200
+        num_particles = 20
         ssm_pf = particle_filter.DiscreteSwitchSSM_PF(num_switch_states,
                                                       num_outputs,
                                                       num_particles=num_particles)
@@ -93,7 +91,7 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         print ssm_pf
         ssm_pf.initialize()
         #data = np.array([0, 1] * 10)
-        data = np.array([1, 1] * 100 + [0])
+        data = np.array([1, 1] * 50 + [0])
         print "data: ", data
         ssm_pf.process_data(data)
         print "testing predictions: "

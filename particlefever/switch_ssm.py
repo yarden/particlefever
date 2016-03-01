@@ -638,9 +638,6 @@ def pf_observe(data_point, particle, prior, **kwargs):
     """
     out_prior_counts = \
       prior.ssm.out_trans_mat_hyperparams[particle.switch_state, :]
-    ####
-    #### TODO: NEED TO REFERENCE PREVIOUS OUTPUT HERE
-    ####
     prev_output = kwargs["prev_output"]
     if prev_output is None:
         out_trans_counts = np.zeros(prior.ssm.num_outputs)
