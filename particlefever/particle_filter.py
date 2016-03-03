@@ -259,10 +259,9 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                                                          self.prior,
                                                          prev_output=prev_output)
                 output_probs[n, sampled_output] += self.weights[p]
-                print "particle %s predicts" %(str(curr_particle)), " ", sampled_output, " prev output: ", prev_output
+#                print "particle %s predicts" %(str(curr_particle)), " ", sampled_output, " prev output: ", prev_output
                 # update previous output
                 particle_prev_outputs[p] = sampled_output
-            raise Exception, "predicted %d" %(n)
             output_probs[n, :] /= self.weights.sum()
             # resample outputs
             self.resample()
@@ -282,40 +281,33 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
         prev_output = None
         self.lag_predictions = OrderedDict()
         for k in xrange(num_obs):
-            # need to add 1 here to k to get 1-based time
-            # for lag computation
-            time_to_use = k + 1 - lag
-            if time_to_use <= 0:
-                posterior = self.filter_results[0]
-            else:
-                # also need to add 1 here to k to get 1-based time
-                # for lag computation
+            time_to_use = k - lag
+            print "TIME TO USE FOR %d is %d" %(k, time_to_use)
+            if time_to_use >= 0:
+                # use the particles from the relevant time point
+                # note that if time_to_use < 0, then we draw
+                # from the prior
                 posterior = self.filter_results[time_to_use]
                 # previous output is the one right before the time point
                 # we used for the computation
                 if (time_to_use - 1) >= 0:
                     prev_output = data[time_to_use - 1]
-            print "PREVIOUS OUTPUT FOR %d was" %(k), prev_output
-            ###
-            ### TODO: here add code to predict remaining
-            ### observations using current set of particles, without
-            ### adversely affecting the state of the object, i.e.
-            ### self.particles or self.weights. Perhaps project forward
-            ### then restore them to what they were at this time point.
-            ###
+                print "PREVIOUS OUTPUT FOR %d was" %(k), prev_output
+                self.particles = copy.deepcopy(posterior["particles"])
+                self.weights = copy.deepcopy(posterior["weights"])
             # predict remaining observations using current
             # set of particles
             num_preds = num_obs - k
+            print "PREDICTION @ TIME STEP %d" %(k)
             print "predicting rest of %d time points" %(num_preds)
             print "  - curr t: %d" %(k)
-            self.particles = copy.deepcopy(posterior["particles"])
-            self.weights = copy.deepcopy(posterior["weights"])
             predictions = self.predict_output(num_preds,
                                               prev_output)
-            print "predictions: ", predictions
-            raise Exception, "test"
+            print "USING PREDICTIONS from %d to %d" %(0, lag)
+            print predictions[0:lag, :]
+            print " --- "
             # here don't add 1 to k; we're storing 0-based time
-#            prediction_probs[k, :] = predictions[k
+            prediction_probs[k, :] = predictions[0:lag, :][0]
         return prediction_probs
 
     def __str__(self):

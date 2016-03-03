@@ -83,15 +83,15 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         ssm = copy.deepcopy(self.simple_ssm)
         num_switch_states = ssm.num_switch_states
         num_outputs = ssm.num_outputs
-        num_particles = 20
+        num_particles = 50
         ssm_pf = particle_filter.DiscreteSwitchSSM_PF(num_switch_states,
                                                       num_outputs,
                                                       num_particles=num_particles)
         print "SSM PF: "
         print ssm_pf
         ssm_pf.initialize()
-        #data = np.array([0, 1] * 10)
-        data = np.array([1, 1] * 50 + [0])
+        data = np.array([0, 1] * 10)
+        #data = np.array([1, 1] * 50 + [0])
         print "data: ", data
         ssm_pf.process_data(data)
         print "testing predictions: "
@@ -100,7 +100,10 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         pred_probs = ssm_pf.predict_output(num_preds, prev_output)
         print "prediction probs: "
         print pred_probs
-
+        # now test prediction with lag
+        print "PRED WITH LAG:"
+        pred_with_lag = ssm_pf.prediction_with_lag(data)
+        print pred_with_lag
 
 class TestDiscreteBayesHMM(unittest.TestCase):
     """
