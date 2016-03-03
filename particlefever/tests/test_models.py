@@ -86,9 +86,10 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         # test predictions with lag
         print "testing predictions with lag"
         for n in xrange(num_iters):
-            ssm_pf = particle_filter.DiscreteSwitchSSM_PF(num_switch_states,
-                                                          num_outputs,
-                                                          num_particles=num_particles)
+            ssm_pf = \
+              particle_filter.DiscreteSwitchSSM_PF(num_switch_states,
+                                                   num_outputs,
+                                                   num_particles=num_particles)
             ssm_pf.initialize()
             data = np.array([1, 1] * 10)
             ssm_pf.process_data(data)
