@@ -78,8 +78,8 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
 
     def test_ssm_particle_filter(self):
         print "testing particle filter"
-        print "setting SEED..."
-        np.random.seed(300)
+#        print "setting SEED..."
+#        np.random.seed(30)
         ssm = copy.deepcopy(self.simple_ssm)
         num_switch_states = ssm.num_switch_states
         num_outputs = ssm.num_outputs
@@ -90,18 +90,23 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         print "SSM PF: "
         print ssm_pf
         ssm_pf.initialize()
-        #data = np.array([0, 1] * 10)
-        data = np.array([1, 1] * 50 + [0])
-        print "data: ", data
+        data = np.array([1, 1] * 10)
         ssm_pf.process_data(data)
-        print "testing predictions: "
-        num_preds = 10
         prev_output = data[-1]
-        pred_probs = ssm_pf.predict_output(num_preds, prev_output)
-        # now test prediction with lag
-        print "PRED WITH LAG:"
+        # test predictions with lag
+        print "testing predictions with lag"
         pred_with_lag = ssm_pf.prediction_with_lag(data)
-        print pred_with_lag
+        # the first prediction should be drawn from prior
+        # and therefore should be close to uniform
+        error_thresh = 0.12
+        assert (abs(pred_with_lag[0][0] - 0.5) <= error_thresh), \
+          "First prediction with lag should be close to 0.5."
+        # test that the remaining predictions tend toward a small
+        # probability of output 0, since our data is all 1s
+        assert ((pred_with_lag[0][0] - pred_with_lag[5][0] > 0) and \
+                (pred_with_lag[5][0] - pred_with_lag[10][0] > 0) and \
+                (pred_with_lag[5][0] - pred_with_lag[-1][0] > 0)), \
+          "Probability of output 0 should be decreasing."
 
 class TestDiscreteBayesHMM(unittest.TestCase):
     """
