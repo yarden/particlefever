@@ -90,16 +90,14 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         print "SSM PF: "
         print ssm_pf
         ssm_pf.initialize()
-        data = np.array([0, 1] * 10)
-        #data = np.array([1, 1] * 50 + [0])
+        #data = np.array([0, 1] * 10)
+        data = np.array([1, 1] * 50 + [0])
         print "data: ", data
         ssm_pf.process_data(data)
         print "testing predictions: "
         num_preds = 10
         prev_output = data[-1]
         pred_probs = ssm_pf.predict_output(num_preds, prev_output)
-        print "prediction probs: "
-        print pred_probs
         # now test prediction with lag
         print "PRED WITH LAG:"
         pred_with_lag = ssm_pf.prediction_with_lag(data)
