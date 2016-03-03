@@ -114,7 +114,6 @@ class TestDiscreteBayesHMM(unittest.TestCase):
     def setUp(self):
         trans_mat_hyperparams = np.ones((2, 2))
         trans_mat_hyperparams *= 1.
-        #trans_mat_hyperparams *= 1.
         # put peaky prior on outputs
         out_mat_hyperparams = np.ones((2, 2))
         #out_mat_hyperparams *= 3.739
