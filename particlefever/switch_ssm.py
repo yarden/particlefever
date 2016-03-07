@@ -30,6 +30,9 @@ class DiscreteSwitchSSM:
                  out_trans_mat_hyperparams=None,
                  sticky_switch_weight=None):
         self.model_type = "discrete_switch_ssm"
+        # default values for transition matrices
+        self.switch_trans_mat = None
+        self.out_trans_mats = None
         self.initialized = False
         self.num_switch_states = num_switch_states
         self.num_outputs = num_outputs
@@ -536,8 +539,9 @@ class ParticlePrior:
     """
     Prior for discrete switching SSM.
     """
-    def __init__(self, num_switch_states, num_outputs):
-        self.ssm = DiscreteSwitchSSM(num_switch_states, num_outputs)
+    def __init__(self, num_switch_states, num_outputs, **model_kwargs):
+        self.ssm = DiscreteSwitchSSM(num_switch_states, num_outputs,
+                                     **model_kwargs)
 
     def initialize(self, num_particles):
         """
