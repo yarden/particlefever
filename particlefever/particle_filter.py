@@ -301,8 +301,6 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
             # this makes the prediction operation much faster
             num_preds = lag
             predictions = self.predict_output(num_preds, prev_output)
-            print "for observation %d using time to use %d" %(k, time_to_use)
-            print "  - prev output was: ", prev_output
             prediction_probs[k, :] = predictions[0, :][0]
         return prediction_probs
 
