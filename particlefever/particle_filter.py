@@ -92,10 +92,10 @@ class ParticleFilter(object):
             self.reweight(data[n])
             # sample new particles
             self.resample()
-        print "particles at end: "
-        print "--" * 5
-        for n in xrange(self.num_particles):
-            print self.particles[n], " weight: ", self.weights[n]
+#        print "particles at end: "
+#        print "--" * 5
+#        for n in xrange(self.num_particles):
+#            print self.particles[n], " weight: ", self.weights[n]
 
             
 class DiscreteBayesHMM_PF(ParticleFilter):
@@ -205,10 +205,10 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                   {"particles": copy.deepcopy(self.particles),
                    "weights": copy.deepcopy(self.weights),
                    "prev_output": prev_output}
-        print "particles at end: "
-        print "--" * 5
-        for n in xrange(self.num_particles):
-            print self.particles[n], " weight: ", self.weights[n]
+#        print "particles at end: "
+#        print "--" * 5
+#        for n in xrange(self.num_particles):
+#            print self.particles[n], " weight: ", self.weights[n]
 
     def predict_output(self, num_preds, prev_output):
         """
@@ -286,22 +286,24 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                 self.particles = copy.deepcopy(self.prior_particles)
                 self.weights = copy.deepcopy(self.prior_weights)
             elif time_to_use >= 0:
+                # previous output is the one right before the time point
+                # we used for the computation
+                prev_output = data[time_to_use]
                 # use the particles from the relevant time point
                 # note that if time_to_use < 0, then we draw
                 # from the prior
                 posterior = self.filter_results[time_to_use]
-                # previous output is the one right before the time point
-                # we used for the computation
-                if (time_to_use - 1) >= 0:
-                    prev_output = data[time_to_use - 1]
                 self.particles = copy.deepcopy(posterior["particles"])
                 self.weights = copy.deepcopy(posterior["weights"])
-            # predict remaining observations using current
-            # set of particles
-            num_preds = num_obs - k
-            predictions = self.predict_output(num_preds,
-                                              prev_output)
-            prediction_probs[k, :] = predictions[0:lag, :][0]
+            # instead of predicting all remaining observations,
+            # predict only the observations needed for the lag
+            #num_preds = num_obs - k
+            # this makes the prediction operation much faster
+            num_preds = lag
+            predictions = self.predict_output(num_preds, prev_output)
+            print "for observation %d using time to use %d" %(k, time_to_use)
+            print "  - prev output was: ", prev_output
+            prediction_probs[k, :] = predictions[0, :][0]
         return prediction_probs
 
     def __str__(self):
