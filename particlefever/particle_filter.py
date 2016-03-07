@@ -260,7 +260,6 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
                                                          self.prior,
                                                          prev_output=prev_output)
                 output_probs[n, sampled_output] += self.weights[p]
-#                print "particle %s predicts" %(str(curr_particle)), " ", sampled_output, " prev output: ", prev_output
                 # update previous output
                 particle_prev_outputs[p] = sampled_output
             output_probs[n, :] /= self.weights.sum()
