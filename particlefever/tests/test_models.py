@@ -124,7 +124,8 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
             ssm_pf.process_data(data)
             prev_output = data[-1]
             pred_with_lag = ssm_pf.prediction_with_lag(data)
-            diff_thresh = 0.6
+            diff_thresh = 0.7
+            print pred_with_lag
             # the average probability of first, third, fifth (odd in 1-time)
             # observations should be much higher than the average of second,
             # fourth, sixth (even in 1-time) observations since we
@@ -138,9 +139,12 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
             print odd_obs_prob, " mean: %.2f" %(odd_obs_prob.mean())
             print "even obs: "
             print even_obs_prob, " mean: %.2f" %(even_obs_prob.mean())
-            assert (odd_obs_prob.mean() - even_obs_prob.mean()) >= diff_thresh, \
+            mean_diff = (odd_obs_prob.mean() - even_obs_prob.mean())
+            print "observed mean diff: %.2f" %(mean_diff)
+            assert (mean_diff >= diff_thresh), \
                 "Odd (1-based time) observations should be much more probable " \
                 "than even (1-based time) observations given periodic data."
+
 
 class TestDiscreteBayesHMM(unittest.TestCase):
     """
