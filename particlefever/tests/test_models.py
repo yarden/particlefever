@@ -85,6 +85,7 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
         num_iters = 20
         # test predictions with lag
         print "testing predictions with lag"
+        first_preds = []
         for n in xrange(num_iters):
             ssm_pf = \
               particle_filter.DiscreteSwitchSSM_PF(num_switch_states,
@@ -97,14 +98,21 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
             pred_with_lag = ssm_pf.prediction_with_lag(data)
             # the first prediction should be drawn from prior
             # and therefore should be close to uniform
-            error_thresh = 0.20
-            assert (abs(pred_with_lag[0][0] - 0.5) <= error_thresh), \
-              "First prediction with lag should be close to 0.5."
+            first_pred = pred_with_lag[0][0]
+            first_preds.append(first_pred)
             # test that the remaining predictions tend toward a small
             # probability of output 0, since our data is all 1s
             assert (((pred_with_lag[0][0] - pred_with_lag[5][0]) > 0) and \
                      (pred_with_lag[5][0] - pred_with_lag[-1][0]) > 0), \
               "Probability of output 0 should be decreasing."
+        # test that first predictions are on average
+        # close to 0.5
+        first_preds = np.array(first_preds)
+        first_pred_thresh = 0.10
+        print "first prediction with lag mean: %.2f" \
+              %(first_preds.mean())
+        assert (abs(first_preds.mean() - first_pred_thresh)), \
+            "First predictions were not close to 0.5 on average."
         print "testing particle filter predictions on periodic data with lag"
         for n in xrange(num_iters):
             ssm_pf = \
@@ -116,8 +124,23 @@ class TestDiscreteSwitchSSM(unittest.TestCase):
             ssm_pf.process_data(data)
             prev_output = data[-1]
             pred_with_lag = ssm_pf.prediction_with_lag(data)
-            print "pred with lag: "
-            print pred_with_lag
+            diff_thresh = 0.6
+            # the average probability of first, third, fifth (odd in 1-time)
+            # observations should be much higher than the average of second,
+            # fourth, sixth (even in 1-time) observations since we
+            # observed a periodic trend of 0, 1
+            # odd observations in 1-based index of time are even observations
+            # in 0-based index of time
+            num_preds = len(pred_with_lag)
+            odd_obs_prob = pred_with_lag[range(0, num_preds, 2)][:, 0]
+            even_obs_prob = pred_with_lag[range(1, num_preds, 2)][:, 0]
+            print "odd obs: "
+            print odd_obs_prob, " mean: %.2f" %(odd_obs_prob.mean())
+            print "even obs: "
+            print even_obs_prob, " mean: %.2f" %(even_obs_prob.mean())
+            assert (odd_obs_prob.mean() - even_obs_prob.mean()) >= diff_thresh, \
+                "Odd (1-based time) observations should be much more probable " \
+                "than even (1-based time) observations given periodic data."
 
 class TestDiscreteBayesHMM(unittest.TestCase):
     """
