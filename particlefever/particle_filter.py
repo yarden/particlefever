@@ -86,17 +86,12 @@ class ParticleFilter(object):
         if len(self.particles) == 0:
             raise Exception, "Must initialize particles first."
         for n in xrange(data.shape[0]):
-            ### new order:
-            print "new order"
-            self.reweight(data[n])
-            self.resample()
-            self.sample_trans()
             # sample new transitions
-#            self.sample_trans()
+            self.sample_trans()
             # correct sampled transitions based on observations
-#            self.reweight(data[n])
+            self.reweight(data[n])
             # sample new particles
-#            self.resample()
+            self.resample()
 #        print "particles at end: "
 #        print "--" * 5
 #        for n in xrange(self.num_particles):
