@@ -86,6 +86,7 @@ class ParticleFilter(object):
         if len(self.particles) == 0:
             raise Exception, "Must initialize particles first."
         for n in xrange(data.shape[0]):
+            ### new order:
             # sample new transitions
             self.sample_trans()
             # correct sampled transitions based on observations
@@ -301,7 +302,7 @@ class DiscreteSwitchSSM_PF(ParticleFilter):
             # this makes the prediction operation much faster
             num_preds = lag
             predictions = self.predict_output(num_preds, prev_output)
-            prediction_probs[k, :] = predictions[0, :][0]
+            prediction_probs[k, :] = predictions[0, :]
         return prediction_probs
 
     def __str__(self):
