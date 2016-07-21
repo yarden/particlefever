@@ -7,16 +7,13 @@ particlefever documentation
 ===========================
 
 Particle filters
------------------
+--------------
 
 Making a new particle filter
 ********************************
 
-To make a new particle filter for a model, classes that define the
-particle and its prior are needed, as well as functions that deal with
-the initialization, transition sampling and weighing by data of
-particles. For example, for the `:class:bayes_hmm.DiscreteBayesHMM`,
-the following are defined:
+To make a new particle filter for a model, classes that define the particle and its prior are needed, as well as functions that deal with the initialization, transition sampling and weighing by data of
+particles. For example, for the `:class:bayes_hmm.DiscreteBayesHMM`, the following are defined:
 
 1. Two classes, :class:`particlefever.bayes_hmm.Particle` and ``ParticlePrior`` have to be defined
    for the model.
@@ -24,7 +21,6 @@ the following are defined:
      - ``pf_prior``: returns a ``ParticlePrior`` object
      - ``pf_trans_sample``: returns a sampled transition to a new latent state, given a previous ``Particle`` instance an a``ParticlePrior`` object.
      - ``pf_observe``: takes a data point, a particle instance and a particle prior instance and returns a weight for the particle in light of the data point.
-
 
 
 
