@@ -22,11 +22,3 @@ install:
   - python setup.py install
 script:
   - python -m unittest discover particlefever
-#before_install:
-# - sudo apt-get install -qq python-numpy python-scipy
-#virtualenv:
-#   system_site_packages: true
-#install:
-#  - pip install .
-#script:
-#  - python -m unittest discover particlefever
