@@ -9,6 +9,16 @@ particlefever documentation
 Particle filters
 --------------
 
+Testing the code
+********************************
+
+Types of built-in particle filters
+********************************
+
+1. Hidden Markov Model
+2. (Switching) Autoregressive hidden Markov Model
+
+
 Making a new particle filter
 ********************************
 
