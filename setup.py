@@ -1,7 +1,7 @@
 ##
 ## particlefever setup
 ##
-from distutils.core import setup, Extension
+from setuptools import setup
 
 ## Definition of the current version
 PARTFEVER_VERSION = "0.1"
@@ -26,8 +26,6 @@ setup(name = 'particlefever',
       keywords = ['science', 'bayesian', 'inference', 'mcmc',
                   'markov-models', 'probabilistic-modeling', 'time-series',
                   'particle-filtering', 'monte-carlo'],
-      install_requires = [
-          "Cython"],
       classifiers = [
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
