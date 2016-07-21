@@ -1,0 +1,10 @@
+language: python
+python:
+  - "2.6"
+  - "2.7"
+install:
+  - travis_wait pip install scipy
+  - travis_wait pip install pysam
+  - pip install .
+script:
+  - python -m unittest discover particlefever
