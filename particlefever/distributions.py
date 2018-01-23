@@ -116,7 +116,7 @@ class DirichletMatrix(Distribution):
         ##
         log_score = 0.
         for n in xrange(self.alpha_mat.shape[0]):
-            log_score += scipy.stats.dirichlet.logpdf(self.alpha_mat[n, :])
+            log_score += scipy.stats.dirichlet.logpdf(T[n, :], self.alpha_mat[n, :])
         return log_score
 
     def sample(self):
